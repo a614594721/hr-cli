@@ -42,3 +42,4 @@ The following policy errors are expected and intentional:
 - `production_write_denied`: write command was attempted outside `DB_ENV=test`.
 - `old_value_changed`: database value changed after preview; regenerate preview before apply.
 - `preview_secret_not_found`: local apply values for a profile-info preview are missing.
+- `missing_operator_urid`: commands that resolve `me` or validate current handler need `HR_OPERATOR_URID` or profile `operator_urid`.

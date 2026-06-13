@@ -233,11 +233,13 @@ func EnsureReadOnly(sqlText string) *errs.Error {
 		err.Param = "--sql"
 		return err
 	}
-	forbidden := regexp.MustCompile(`(?i)\b(insert|update|delete|replace|alter|drop|truncate|create|call|grant|revoke)\b`).FindString(cleaned)
-	if forbidden != "" {
-		err := errs.Policy("raw_write_denied", "forbidden SQL token: "+forbidden)
-		err.Param = "--sql"
-		return err
+	if strings.ToLower(first) == "select" {
+		forbidden := regexp.MustCompile(`(?i)\b(insert|update|delete|replace|alter|drop|truncate|create|call|grant|revoke)\b`).FindString(cleaned)
+		if forbidden != "" {
+			err := errs.Policy("raw_write_denied", "forbidden SQL token: "+forbidden)
+			err.Param = "--sql"
+			return err
+		}
 	}
 	return nil
 }

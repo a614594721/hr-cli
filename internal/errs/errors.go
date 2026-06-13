@@ -25,6 +25,10 @@ func Config(subtype, message string) *Error {
 	return New("config", subtype, message, 2)
 }
 
+func Authentication(subtype, message string) *Error {
+	return New("authentication", subtype, message, 3)
+}
+
 func Policy(subtype, message string) *Error {
 	return New("policy", subtype, message, 3)
 }

@@ -43,7 +43,12 @@ Approval query:
 
 ```bash
 hr approval +tasks --limit 20
+hr approval +tasks --assignee me
 hr approval +task --task-id 10086
+hr approval +instances --employee 12345 --status pending
+hr approval +approve --task-id 10086 --comment "同意" --dry-run
+hr approval +reject --task-id 10086 --reason "资料不完整" --dry-run
+hr approval +transfer --task-id 10086 --to-badge A00123 --comment "转交处理" --dry-run
 ```
 
 Transfer preview:
@@ -78,7 +83,7 @@ These commands return typed policy errors in V1a:
 - `approval +reject`
 - `approval +transfer`
 
-They require verified database write chains, state-machine checks, audit records, and concurrency protection before activation.
+Their `--dry-run` mode is implemented. Their `--yes` mode requires verified database write chains, state-machine checks, audit records, and concurrency protection before activation.
 
 `transfer +apply <preview-id> --dry-run` is implemented as a preflight command. `transfer +apply <preview-id> --yes` executes the native stored-procedure chain only when `DB_ENV=test`, `HR_OPERATOR_URID` is present, and preflight passes.
 `profile-info +apply <preview-id> --yes` updates whitelisted `personal_info` fields only when `DB_ENV=test`, preview old-value hashes still match, and apply-time sensitive-field authorization passes.

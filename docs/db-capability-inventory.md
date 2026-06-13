@@ -10,7 +10,7 @@ This inventory records schema-level findings only. It intentionally avoids dumpi
 |--------|--------------------|-----------------|
 | `employee` | Implemented read-only query/detail | `eemployee`, `employee_dingding` |
 | `attendance` | Implemented read-only records/summary/exceptions | `attend_information`, `attend_information_all`, `cattendancefactoremp` |
-| `approval` | Implemented read-only task list/detail | `skywftask`, `skyddoflowaprtasks`, `skyddoriginalflowinsaprinfo`, `skyddoflowaproprcds` |
+| `approval` | Implemented task/detail/instance query plus write dry-run | `skywftask`, `skywfinstance`, `skyddoflowaprtasks`, `skyddoriginalflowinsaprinfo`, `skyddoflowaproprcds` |
 | `transfer` | Implemented preview only | `eemployee_work`, `eSP_EmpChangeStart`, `eSP_EmpChangeAdd`, `eSP_EmpChangeCheck` |
 | `profile-info` | Implemented preview/apply for whitelisted fields in test | `personal_info`, `users`, `EPRE_STAFFREGISTER` |
 
@@ -92,7 +92,8 @@ Safety conclusion:
 Observed workflow-related tables/views include:
 
 - DingTalk flow pull/import side: `skyddoflowaprtasks`, `skyddoflowaproprcds`, `skyddoriginalflowinsaprinfo`, `skyddoriginalflowinsid`, `skyddoriginalflowparas`.
-- Internal workflow side: `skywftask`, `skywfflow`, `skywfflowlog`, `skywftasknotify`, `skywftaskshift`.
+- Internal workflow side: `skywftask`, `skywfinstance`, `skywfflow`, `skywfflowlog`, `skywftasknotify`, `skywftaskshift`.
+- Procedure candidates include `esp_ddflow_delete`, `esp_ddflow_approver_agent`, `esp_ddflow_resubmit`, and multiple domain-specific `skyWF_*` procedures. These were not verified as generic approve/reject/transfer entrypoints.
 
 Observed row counts:
 
@@ -103,10 +104,12 @@ V1a command mapping:
 
 - `hr approval +tasks`
 - `hr approval +task --task-id ...`
+- `hr approval +instances --employee ... --status pending`
+- `hr approval +approve/+reject/+transfer --task-id ... --dry-run`
 
 Safety conclusion:
 
-- Approval write operations are intentionally not implemented. Do not simulate approval by updating task status columns. Need to verify state machine, native stored procedures or service entrypoint, logs, notifications, and business callbacks first.
+- Approval write `--yes` operations are intentionally not implemented. Dry-run returns the task, operator match checks, and unverified native candidates. Do not simulate approval by updating task status columns. Need to verify state machine, native stored procedures or service entrypoint, logs, notifications, and business callbacks first.
 
 ## Attendance
 

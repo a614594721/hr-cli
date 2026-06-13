@@ -164,6 +164,8 @@ hr profile-info +apply <preview-id> --yes
 ```bash
 hr approval +tasks --assignee me
 hr approval +task --task-id 10086
+hr approval +instances --employee 12345 --status pending
+hr approval +approve --task-id 10086 --comment "同意" --dry-run
 ```
 
 查询打卡记录：
