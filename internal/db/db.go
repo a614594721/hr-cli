@@ -146,6 +146,28 @@ func WithConn(fn func(context.Context, *sql.Conn) *errs.Error) *errs.Error {
 	return fn(ctx, sqlConn)
 }
 
+func WithTx(fn func(context.Context, *sql.Tx) *errs.Error) *errs.Error {
+	conn, _, openErr := Open()
+	if openErr != nil {
+		return openErr
+	}
+	defer conn.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return errs.DB("transaction_begin_failed", err.Error())
+	}
+	if fnErr := fn(ctx, tx); fnErr != nil {
+		_ = tx.Rollback()
+		return fnErr
+	}
+	if err := tx.Commit(); err != nil {
+		return errs.DB("transaction_commit_failed", err.Error())
+	}
+	return nil
+}
+
 func ExecOnConn(ctx context.Context, conn *sql.Conn, query string, args ...any) *errs.Error {
 	if _, err := conn.ExecContext(ctx, query, args...); err != nil {
 		return errs.DB("exec_failed", err.Error())
@@ -155,6 +177,29 @@ func ExecOnConn(ctx context.Context, conn *sql.Conn, query string, args ...any) 
 
 func QueryOneOnConn(ctx context.Context, conn *sql.Conn, query string, args ...any) (map[string]any, *errs.Error) {
 	rows, err := conn.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, errs.DB("query_failed", err.Error())
+	}
+	defer rows.Close()
+	scanned, scanErr := scanRows(rows)
+	if scanErr != nil {
+		return nil, scanErr
+	}
+	if len(scanned) == 0 {
+		return nil, nil
+	}
+	return scanned[0], nil
+}
+
+func ExecTx(ctx context.Context, tx *sql.Tx, query string, args ...any) *errs.Error {
+	if _, err := tx.ExecContext(ctx, query, args...); err != nil {
+		return errs.DB("exec_failed", err.Error())
+	}
+	return nil
+}
+
+func QueryOneTx(ctx context.Context, tx *sql.Tx, query string, args ...any) (map[string]any, *errs.Error) {
+	rows, err := tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, errs.DB("query_failed", err.Error())
 	}

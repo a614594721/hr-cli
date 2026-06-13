@@ -51,7 +51,7 @@
 | `auth` | 登录、身份映射、当前操作者、权限解释 | 优先实现，所有业务命令前置依赖 |
 | `employee` | 员工查询、员工快照、可操作动作摘要 | V1 必做，默认只读 |
 | `transfer` | 人员调动 preview / apply | V1 做单人调动，走系统原生链路 |
-| `profile-info` | 个人资料修改 preview / apply | V1 做白名单字段，高敏字段单独闸门 |
+| `profile-info` | 个人资料修改 preview / apply | V1 做白名单字段，高敏字段单独闸门，测试环境可执行 |
 | `approval` | 审批任务查询、审批详情、同意/拒绝/转交 | V1 先查询，写操作等状态机核实后实现 |
 | `attendance` | 打卡记录、考勤汇总、异常查询 | V1 只读 |
 
@@ -100,8 +100,9 @@ go build -o hr.exe .
 
 ```bash
 hr config init
-hr profile add test
+hr profile add test --db-env test --db-host <host> --db-name <database> --db-user <user> --credential-target <credential-name>
 hr profile use test
+hr credential status
 hr auth +login
 hr auth +me
 hr doctor
@@ -154,6 +155,8 @@ hr profile-info +preview \
   --user-id 6094 \
   --set emergency_contact=李四 \
   --set emergency_phone=13900000000
+
+hr profile-info +apply <preview-id> --yes
 ```
 
 查询审批任务：

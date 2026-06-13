@@ -59,6 +59,7 @@ Profile info preview:
 
 ```bash
 hr profile-info +preview --user-id 6094 --set emergency_contact=李四 --set emergency_phone=13900000000
+hr profile-info +apply <preview-id> --yes
 ```
 
 Raw diagnostics:
@@ -73,7 +74,6 @@ Only `SELECT`, `SHOW`, `DESCRIBE`, `DESC`, and `EXPLAIN` are allowed. `CALL`, DD
 
 These commands return typed policy errors in V1a:
 
-- `profile-info +apply`
 - `approval +approve`
 - `approval +reject`
 - `approval +transfer`
@@ -81,3 +81,4 @@ These commands return typed policy errors in V1a:
 They require verified database write chains, state-machine checks, audit records, and concurrency protection before activation.
 
 `transfer +apply <preview-id> --dry-run` is implemented as a preflight command. `transfer +apply <preview-id> --yes` executes the native stored-procedure chain only when `DB_ENV=test`, `HR_OPERATOR_URID` is present, and preflight passes.
+`profile-info +apply <preview-id> --yes` updates whitelisted `personal_info` fields only when `DB_ENV=test`, preview old-value hashes still match, and apply-time sensitive-field authorization passes.

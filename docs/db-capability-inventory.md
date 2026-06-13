@@ -12,7 +12,7 @@ This inventory records schema-level findings only. It intentionally avoids dumpi
 | `attendance` | Implemented read-only records/summary/exceptions | `attend_information`, `attend_information_all`, `cattendancefactoremp` |
 | `approval` | Implemented read-only task list/detail | `skywftask`, `skyddoflowaprtasks`, `skyddoriginalflowinsaprinfo`, `skyddoflowaproprcds` |
 | `transfer` | Implemented preview only | `eemployee_work`, `eSP_EmpChangeStart`, `eSP_EmpChangeAdd`, `eSP_EmpChangeCheck` |
-| `profile-info` | Implemented preview only | `personal_info`, `users` |
+| `profile-info` | Implemented preview/apply for whitelisted fields in test | `personal_info`, `users`, `EPRE_STAFFREGISTER` |
 
 ## Employee
 
@@ -80,10 +80,12 @@ Important `personal_info` fields:
 V1a command mapping:
 
 - `hr profile-info +preview --user-id ... --set field=value`
+- `hr profile-info +apply <preview-id> --yes`
 
 Safety conclusion:
 
-- Apply is intentionally not implemented in V1a. Trigger synchronization targets and old-value concurrency checks must be verified before enabling writes.
+- Apply is implemented for `DB_ENV=test` only. Preview stores display-safe diffs plus old-value hashes; raw apply values are stored separately under the local ignored preview secret store. Apply re-checks sensitive-field authorization, locks the `personal_info` row, verifies old-value hashes, updates whitelisted columns, and verifies direct trigger synchronization into `EPRE_STAFFREGISTER`.
+- Trigger verification is direct for fields such as `emergency_contact -> EMERGENCYCONTACT`, `emergency_phone -> EMERGENCYTELEPHONE`, `address -> RESIDENCE`, `household_address -> BIRTHPLACE`, `personal_intro -> Personal_Introduction`, and related bank/phone fields. Transformed enum fields still require domain-specific verification.
 
 ## Approval
 

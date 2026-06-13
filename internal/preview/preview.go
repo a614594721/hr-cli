@@ -88,6 +88,37 @@ func Load(id string) (Payload, *errs.Error) {
 	return payload, nil
 }
 
+func SaveSecret(id string, value any) *errs.Error {
+	dir := filepath.Join(".", ".hr-cli", "previews", "secrets")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return errs.Config("preview_secret_store_failed", err.Error())
+	}
+	data, err := json.MarshalIndent(clean(value), "", "  ")
+	if err != nil {
+		return errs.Config("preview_secret_encode_failed", err.Error())
+	}
+	path := filepath.Join(dir, id+".json")
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		return errs.Config("preview_secret_store_failed", err.Error())
+	}
+	return nil
+}
+
+func LoadSecret(id string) (map[string]any, *errs.Error) {
+	path := filepath.Join(".", ".hr-cli", "previews", "secrets", id+".json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		e := errs.Validation("preview_secret_not_found", "preview apply values were not found")
+		e.Hint = "re-run preview and apply the new preview id"
+		return nil, e
+	}
+	var value map[string]any
+	if err := json.Unmarshal(data, &value); err != nil {
+		return nil, errs.Validation("invalid_preview_secret", err.Error())
+	}
+	return value, nil
+}
+
 func newID() string {
 	buf := make([]byte, 3)
 	_, _ = rand.Read(buf)

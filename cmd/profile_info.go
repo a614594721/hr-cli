@@ -4,7 +4,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"hr-cli/internal/capability/profileinfo"
-	"hr-cli/internal/errs"
 )
 
 func newProfileInfoCommand() *cobra.Command {
@@ -27,14 +26,19 @@ func newProfileInfoCommand() *cobra.Command {
 	prev.Flags().BoolVar(&sensitive, "sensitive", false, "allow sensitive whitelist fields")
 	_ = prev.MarkFlagRequired("user-id")
 
+	var yes bool
 	apply := &cobra.Command{
 		Use:  "+apply <preview-id>",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return errs.Policy("apply_not_implemented", "profile-info apply is intentionally not implemented in V1a")
+			data, err := profileinfo.Apply(args[0], yes)
+			if err != nil {
+				return err
+			}
+			return emit(cmd, data)
 		},
 	}
-	apply.Flags().Bool("yes", false, "confirm apply")
+	apply.Flags().BoolVar(&yes, "yes", false, "confirm apply")
 	root.AddCommand(prev, apply)
 	return root
 }

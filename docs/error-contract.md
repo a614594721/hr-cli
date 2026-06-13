@@ -38,5 +38,7 @@ The following policy errors are expected and intentional:
 
 - `raw_write_denied`: raw SQL is not read-only.
 - `multi_statement_denied`: raw SQL contains multiple statements.
-- `apply_not_implemented`: high-risk apply command is disabled in V1a.
 - `approval_write_not_verified`: approval write path has not been verified.
+- `production_write_denied`: write command was attempted outside `DB_ENV=test`.
+- `old_value_changed`: database value changed after preview; regenerate preview before apply.
+- `preview_secret_not_found`: local apply values for a profile-info preview are missing.
