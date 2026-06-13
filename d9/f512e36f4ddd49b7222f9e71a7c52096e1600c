@@ -1,0 +1,37 @@
+cmd/attendance.go
+  s_7be72006deb3f3::t_d6709f1072c820 1-75
+cmd/doctor.go
+  s_7be72006deb3f3::t_d6709f1072c820 1-21
+cmd/root.go
+  s_7be72006deb3f3::t_d6709f1072c820 1-93
+cmd/profile_info.go
+  s_7be72006deb3f3::t_d6709f1072c820 1-40
+cmd/db.go
+  s_7be72006deb3f3::t_d6709f1072c820 1-30
+cmd/approval.go
+  s_7be72006deb3f3::t_d6709f1072c820 1-56
+cmd/perm.go
+  s_7be72006deb3f3::t_d6709f1072c820 1-32
+cmd/auth.go
+  s_7be72006deb3f3::t_d6709f1072c820 1-32
+cmd/employee.go
+  s_7be72006deb3f3::t_d6709f1072c820 1-44
+cmd/transfer.go
+  s_7be72006deb3f3::t_d6709f1072c820 1-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "d9f512e36f4ddd49b7222f9e71a7c52096e1600c",
+  "prompts": {},
+  "sessions": {
+    "s_7be72006deb3f3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ec157-1d72-7df0-b37e-eff240fe4561",
+        "model": "gpt-5.5"
+      },
+      "human_author": "wubang <614594721@qq.com>"
+    }
+  }
+}
