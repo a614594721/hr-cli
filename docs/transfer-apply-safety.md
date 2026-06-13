@@ -1,6 +1,6 @@
 # Transfer Apply Safety Plan
 
-This document records the read-only investigation and the current safe apply skeleton for `transfer +apply`.
+This document records the read-only investigation and the native apply implementation for `transfer +apply`.
 
 ## Current Conclusion
 
@@ -14,13 +14,20 @@ The verified native direction is:
 4. `CALL eSP_EmpChangeStart(P_ID, P_URID, OUT P_RetVal)`
 5. Verify `eemployee`, `eemployee_work_all`, and audit result.
 
-Native execution is still disabled in code. The implemented command supports preflight only:
+The command supports preflight:
 
 ```bash
 hr transfer +apply <preview-id> --dry-run
 ```
 
-`--yes` still stops before write execution until the remaining unknowns below are closed.
+Native write execution is enabled only for `DB_ENV=test`:
+
+```bash
+set HR_OPERATOR_URID=100171
+hr transfer +apply <preview-id> --yes
+```
+
+The command writes audit records under `.hr-cli/audit/`.
 
 ## Read-Only Findings
 
@@ -67,31 +74,46 @@ Observed behavior:
 - Runs daily sync when the effect date is current or past.
 - Triggers webhook routines after commit for selected change types.
 
-This means apply must either call the correct check/initialization routine before `Start`, or understand which procedure marks the row initialized.
+`eSP_EmpChangeCheck` is the check/initialization routine. It calls `esp_objnameckeck(...)` and then sets `INITIALIZED=1`, `INITIALIZEDBY`, and `INITIALIZEDTIME` on `eemployee_work`.
 
 ### Current Type Evidence
 
-Recent active `eemployee_work` rows show `XTYPE=12` for recent batch transfer/change rows. The CLI currently treats `12` as the default transfer change type for preflight, but final enablement should confirm the exact type mapping for the product operation.
+Recent active `eemployee_work` rows show `XTYPE=12` for recent batch transfer/change rows. `eCD_ChangeType.ID=12` is titled `批量变动`, and the CLI currently uses this as the transfer change type.
+
+Form metadata lookup found:
+
+- `P_TableName = EEMPLOYEE_WORK`
+- `P_FMID = 110001`, form title `调动管理`
+- `P_RefID = 0`
 
 ## Implemented Preflight
 
-`transfer +apply <preview-id> --dry-run` now checks:
+`transfer +apply <preview-id> --dry-run` checks:
 
 - Preview exists and is kind `transfer`.
 - Operator identity is resolved.
 - `HR_OPERATOR_URID` is present, because native procedures require `P_URID`.
 - Current `DPID`/`JBID` old values still match the preview.
 - No open `eemployee_work` row exists for the same employee and default transfer type.
-- Native execution is still disabled.
+- The preview contains a real `DPID` or `JBID` change, not a no-op.
+- The preview contains `EFFECTDATE`.
+
+`transfer +apply <preview-id> --yes` executes:
+
+1. Write `transfer.apply.start` audit event.
+2. Call `eSP_EmpChangeAdd`.
+3. Locate the generated `eemployee_work.ID`.
+4. Update only approved fields: `DPID`, `JBID`, `EFFECTDATE`, `reason`, `CHGCOMMENT`.
+5. Call `eSP_EmpChangeCheck`.
+6. Call `eSP_EmpChangeStart`.
+7. Verify active work row removal and `eemployee_work_all` history creation.
+8. Write success or failure audit event.
 
 ## Remaining Enablement Work
 
-Before enabling real writes:
+Still needed:
 
-- Confirm the exact `P_xType`, `P_RefID`, `P_TableName`, and `P_FMID` values for this product flow.
-- Identify and verify the procedure that marks the work row initialized before `eSP_EmpChangeStart`.
-- Decide how to obtain and validate `HR_OPERATOR_URID`.
-- Add an audit table/file writer for preview, preflight, stored procedure return codes, verification, and failures.
-- Add transaction boundaries around the CLI-controlled field update and stored procedure calls where applicable.
-- Add post-apply verification against `eemployee` and `eemployee_work_all`.
-- Add integration tests against a dedicated disposable test employee.
+- Replace environment `HR_OPERATOR_URID` with a real auth/session mapping.
+- Add a dedicated disposable test employee and run an end-to-end write test.
+- Expand audit from local jsonl to the final audit sink.
+- Document stored procedure return-code meanings.

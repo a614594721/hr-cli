@@ -51,6 +51,7 @@ Transfer preview:
 ```bash
 hr transfer +preview --badge A00123 --dept 1001 --job 2002 --effect-date 2026-06-20 --reason "组织调整"
 hr transfer +apply <preview-id> --dry-run
+hr transfer +apply <preview-id> --yes
 hr transfer preview show <preview-id>
 ```
 
@@ -79,4 +80,4 @@ These commands return typed policy errors in V1a:
 
 They require verified database write chains, state-machine checks, audit records, and concurrency protection before activation.
 
-`transfer +apply <preview-id> --dry-run` is implemented as a preflight-only command. Real native write execution remains disabled.
+`transfer +apply <preview-id> --dry-run` is implemented as a preflight command. `transfer +apply <preview-id> --yes` executes the native stored-procedure chain only when `DB_ENV=test`, `HR_OPERATOR_URID` is present, and preflight passes.

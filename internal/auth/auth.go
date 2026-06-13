@@ -1,6 +1,10 @@
 package auth
 
-import "os"
+import (
+	"os"
+
+	"hr-cli/internal/runtime"
+)
 
 type Operator struct {
 	EID    string `json:"eid,omitempty"`
@@ -12,7 +16,8 @@ type Operator struct {
 }
 
 func CurrentOperator() Operator {
-	role := os.Getenv("HR_OPERATOR_ROLE")
+	profile, hasProfile := runtime.ActiveProfile()
+	role := firstNonEmpty(os.Getenv("HR_OPERATOR_ROLE"), profile.OperatorRole)
 	if role == "" {
 		if os.Getenv("DB_ENV") == "test" || os.Getenv("DB_ENV") == "" {
 			role = "HR_ADMIN"
@@ -20,19 +25,32 @@ func CurrentOperator() Operator {
 			role = "SELF"
 		}
 	}
-	name := os.Getenv("HR_OPERATOR_NAME")
+	name := firstNonEmpty(os.Getenv("HR_OPERATOR_NAME"), profile.OperatorName)
 	if name == "" {
 		name = os.Getenv("USERNAME")
 	}
 	if name == "" {
 		name = "local-operator"
 	}
+	source := "environment"
+	if os.Getenv("HR_OPERATOR_NAME") == "" && hasProfile && profile.OperatorName != "" {
+		source = "profile"
+	}
 	return Operator{
-		EID:    os.Getenv("HR_OPERATOR_EID"),
-		URID:   os.Getenv("HR_OPERATOR_URID"),
-		Badge:  os.Getenv("HR_OPERATOR_BADGE"),
+		EID:    firstNonEmpty(os.Getenv("HR_OPERATOR_EID"), profile.OperatorEID),
+		URID:   firstNonEmpty(os.Getenv("HR_OPERATOR_URID"), profile.OperatorURID),
+		Badge:  firstNonEmpty(os.Getenv("HR_OPERATOR_BADGE"), profile.OperatorBadge),
 		Name:   name,
 		Role:   role,
-		Source: "environment",
+		Source: source,
 	}
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
 }

@@ -13,6 +13,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 
 	"hr-cli/internal/errs"
+	"hr-cli/internal/runtime"
 )
 
 type Config struct {
@@ -25,13 +26,17 @@ type Config struct {
 }
 
 func EnvConfig() (Config, *errs.Error) {
+	profile, hasProfile := runtime.ActiveProfile()
 	cfg := Config{
-		Env:      valueOrDefault(os.Getenv("DB_ENV"), "test"),
-		Host:     os.Getenv("DB_HOST"),
-		Port:     valueOrDefault(os.Getenv("DB_PORT"), "3306"),
-		User:     os.Getenv("DB_USER"),
+		Env:      valueOrDefault(firstNonEmpty(os.Getenv("DB_ENV"), profile.DBEnv), "test"),
+		Host:     firstNonEmpty(os.Getenv("DB_HOST"), profile.DBHost),
+		Port:     valueOrDefault(firstNonEmpty(os.Getenv("DB_PORT"), profile.DBPort), "3306"),
+		User:     firstNonEmpty(os.Getenv("DB_USER"), profile.DBUser),
 		Password: os.Getenv("DB_PASSWORD"),
-		Name:     os.Getenv("DB_NAME"),
+		Name:     firstNonEmpty(os.Getenv("DB_NAME"), profile.DBName),
+	}
+	if !hasProfile {
+		cfg.Env = valueOrDefault(os.Getenv("DB_ENV"), "test")
 	}
 	var missing []string
 	for key, value := range map[string]string{
@@ -125,6 +130,45 @@ func RawQuery(sqlText string, args []string, limit int) ([]map[string]any, *errs
 	return rows, nil
 }
 
+func WithConn(fn func(context.Context, *sql.Conn) *errs.Error) *errs.Error {
+	conn, _, openErr := Open()
+	if openErr != nil {
+		return openErr
+	}
+	defer conn.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	sqlConn, err := conn.Conn(ctx)
+	if err != nil {
+		return errs.DB("connect_failed", err.Error())
+	}
+	defer sqlConn.Close()
+	return fn(ctx, sqlConn)
+}
+
+func ExecOnConn(ctx context.Context, conn *sql.Conn, query string, args ...any) *errs.Error {
+	if _, err := conn.ExecContext(ctx, query, args...); err != nil {
+		return errs.DB("exec_failed", err.Error())
+	}
+	return nil
+}
+
+func QueryOneOnConn(ctx context.Context, conn *sql.Conn, query string, args ...any) (map[string]any, *errs.Error) {
+	rows, err := conn.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, errs.DB("query_failed", err.Error())
+	}
+	defer rows.Close()
+	scanned, scanErr := scanRows(rows)
+	if scanErr != nil {
+		return nil, scanErr
+	}
+	if len(scanned) == 0 {
+		return nil, nil
+	}
+	return scanned[0], nil
+}
+
 func EnsureReadOnly(sqlText string) *errs.Error {
 	cleaned := strings.TrimSpace(regexp.MustCompile(`(?s)/\*.*?\*/`).ReplaceAllString(sqlText, " "))
 	if cleaned == "" {
@@ -190,4 +234,13 @@ func valueOrDefault(value, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
 }

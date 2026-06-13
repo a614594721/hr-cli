@@ -51,7 +51,9 @@ Additional read-only findings:
 - `eSP_EmpChangeAdd` copies the full employee snapshot from `eemployee` into `eemployee_work`; CLI code should not manually insert a partial staging row.
 - `eSP_EmpChangeStart` writes `eemployee_work_all`, deletes the active `eemployee_work` row, calls refresh/sync routines, and can trigger webhooks.
 - `eSP_EmpChangeStart` returns `910020` if the work row has not been initialized.
-- Recent active staging rows show `XTYPE=12` for current batch change/transfer-like rows; final apply enablement still needs confirmed type mapping.
+- `eSP_EmpChangeCheck` calls object/form validation and then sets `INITIALIZED=1`.
+- Recent active staging rows show `XTYPE=12`, and `eCD_ChangeType.ID=12` is `批量变动`.
+- Form metadata maps transfer management to `P_TableName=EEMPLOYEE_WORK`, `P_FMID=110001`.
 
 V1a command mapping:
 
@@ -61,7 +63,7 @@ V1a command mapping:
 
 Safety conclusion:
 
-- Native apply execution remains disabled. The current apply command performs preflight only. Before enabling writes, confirm `P_xType`, `P_RefID`, `P_TableName`, `P_FMID`, initialization/check sequence, operator `P_URID`, audit logging, and post-apply verification in `eemployee` / history tables.
+- Native apply execution is implemented for `DB_ENV=test` only. It requires `HR_OPERATOR_URID`, uses `P_xType=12`, `P_RefID=0`, `P_TableName=EEMPLOYEE_WORK`, `P_FMID=110001`, writes local audit records, and verifies active work-row removal plus `eemployee_work_all` history creation.
 
 ## Profile Info
 

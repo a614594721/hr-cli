@@ -54,6 +54,9 @@ func NewRoot() *cobra.Command {
 	}
 	root.AddCommand(
 		newDoctorCommand(),
+		newConfigCommand(),
+		newProfileCommand(),
+		newCredentialCommand(),
 		newAuthCommand(),
 		newPermCommand(),
 		newEmployeeCommand(),
