@@ -1,0 +1,78 @@
+internal/redact/redact.go
+  s_7be72006deb3f3::t_9f16df94386780 1-57
+.gitignore
+  s_7be72006deb3f3::t_c6844f8d8fe7a2 1-6
+docs/error-contract.md
+  s_7be72006deb3f3::t_c6844f8d8fe7a2 1-42
+internal/capability/employee/employee.go
+  s_7be72006deb3f3::t_af0f887b96627c 1-90
+internal/capability/attendance/attendance.go
+  s_7be72006deb3f3::t_af0f887b96627c 1-112
+internal/capability/profileinfo/profileinfo.go
+  s_7be72006deb3f3::t_af0f887b96627c 1-106
+internal/capability/doctor/doctor.go
+  s_7be72006deb3f3::t_af0f887b96627c 1-33
+README.md
+  s_7be72006deb3f3::t_64fd07c5a81f3b 8-10,48-70,77,80
+internal/capability/transfer/transfer.go
+  s_7be72006deb3f3::t_af0f887b96627c 1-40
+docs/hr-cli-plan-lark-v4.md
+  s_7be72006deb3f3::t_cf3d35f508e184 3-4,438,440,450
+docs/hr-cli-plan-lark-v3.1.md
+  s_5296c32603aae6::t_4f129a82616e1a 1-233
+internal/auth/auth.go
+  s_7be72006deb3f3::t_5596fae9c92d90 1-36
+internal/output/output.go
+  s_7be72006deb3f3::t_9f16df94386780 1-153
+internal/db/db.go
+  s_7be72006deb3f3::t_5596fae9c92d90 1-193
+probe.py
+  s_31bed008978816::t_717eba1667bb01 28,34,40
+  s_31bed008978816::t_ab6e807effd44d 12-18,20-27,29-33,35-39,41-47
+internal/errs/errors.go
+  s_7be72006deb3f3::t_9f16df94386780 1-38
+internal/preview/preview.go
+  s_7be72006deb3f3::t_5596fae9c92d90 1-66
+go.mod
+  s_7be72006deb3f3::t_9f16df94386780 1-8
+docs/db-capability-inventory.md
+  s_7be72006deb3f3::t_c6844f8d8fe7a2 1-122
+docs/command-contract.md
+  s_7be72006deb3f3::t_c6844f8d8fe7a2 1-80
+internal/capability/approval/approval.go
+  s_7be72006deb3f3::t_af0f887b96627c 1-51
+main.go
+  s_7be72006deb3f3::t_9f16df94386780 1-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "58e406aca82e2eb8443dd025112ab7761b3fdeec",
+  "prompts": {},
+  "sessions": {
+    "s_31bed008978816": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e971ef8c-66a8-484d-a7e0-56dfd0b18bec",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "wubang <614594721@qq.com>"
+    },
+    "s_5296c32603aae6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90993255-a2a9-4abe-8485-6ec14dee83b6",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "wubang <614594721@qq.com>"
+    },
+    "s_7be72006deb3f3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ec157-1d72-7df0-b37e-eff240fe4561",
+        "model": "gpt-5.5"
+      },
+      "human_author": "wubang <614594721@qq.com>"
+    }
+  }
+}
