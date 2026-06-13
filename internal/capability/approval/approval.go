@@ -8,9 +8,13 @@ import (
 	"hr-cli/internal/auth"
 	"hr-cli/internal/db"
 	"hr-cli/internal/errs"
+	"hr-cli/internal/perm"
 )
 
 func Tasks(assignee string, limit int) ([]map[string]any, *errs.Error) {
+	if err := perm.Require("approval.task.list", ""); err != nil {
+		return nil, err
+	}
 	args := []any{}
 	query := `
 		SELECT t.ID AS task_id, t.INSTANCEID AS instance_id, t.NODEID AS node_id,
@@ -39,6 +43,9 @@ func Tasks(assignee string, limit int) ([]map[string]any, *errs.Error) {
 }
 
 func Task(taskID int) (map[string]any, *errs.Error) {
+	if err := perm.Require("approval.task.get", ""); err != nil {
+		return nil, err
+	}
 	row, err := db.QueryOne(`
 		SELECT t.ID AS task_id, t.INSTANCEID AS instance_id, t.NODEID AS node_id,
 		       t.SLOTID AS slot_id, t.APPROVER AS approver, t.AGENT AS agent,
@@ -59,6 +66,9 @@ func Task(taskID int) (map[string]any, *errs.Error) {
 }
 
 func Instances(employee, status string, limit int) ([]map[string]any, *errs.Error) {
+	if err := perm.Require("approval.task.list", employee); err != nil {
+		return nil, err
+	}
 	where := []string{}
 	args := []any{}
 	if employee != "" {
@@ -92,6 +102,9 @@ func Instances(employee, status string, limit int) ([]map[string]any, *errs.Erro
 }
 
 func WritePlan(action string, taskID int, comment, reason, toBadge string, dryRun, yes bool) (map[string]any, *errs.Error) {
+	if err := perm.Require(actionPermission(action), ""); err != nil {
+		return nil, err
+	}
 	if !dryRun && !yes {
 		err := errs.Confirmation("missing_confirmation", action+" requires --dry-run or --yes")
 		err.Hint = "use --dry-run to inspect the approval task and native-chain status"
@@ -126,6 +139,19 @@ func WritePlan(action string, taskID int, comment, reason, toBadge string, dryRu
 	err = errs.Policy("approval_write_not_verified", action+" is not implemented because the approval state machine has not been verified")
 	err.Hint = "dry-run is available, but --yes remains disabled until a native approve/reject/transfer chain is confirmed"
 	return nil, err
+}
+
+func actionPermission(action string) string {
+	switch action {
+	case "+approve":
+		return "approval.task.approve"
+	case "+reject":
+		return "approval.task.reject"
+	case "+transfer":
+		return "approval.task.transfer"
+	default:
+		return action
+	}
 }
 
 func formState(status string) (int, *errs.Error) {

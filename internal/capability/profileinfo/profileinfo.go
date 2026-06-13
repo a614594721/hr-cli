@@ -12,6 +12,7 @@ import (
 	"hr-cli/internal/auth"
 	"hr-cli/internal/db"
 	"hr-cli/internal/errs"
+	"hr-cli/internal/perm"
 	"hr-cli/internal/preview"
 	"hr-cli/internal/redact"
 )
@@ -43,6 +44,9 @@ var staffRegisterDirectFields = map[string]string{
 }
 
 func Preview(userID int, setValues []string, sensitive bool) (preview.Payload, *errs.Error) {
+	if err := perm.Require("profile_info.preview", fmt.Sprint(userID)); err != nil {
+		return preview.Payload{}, err
+	}
 	changesIn, err := parseSets(setValues)
 	if err != nil {
 		return preview.Payload{}, err
@@ -110,6 +114,9 @@ func Preview(userID int, setValues []string, sensitive bool) (preview.Payload, *
 }
 
 func Apply(previewID string, yes bool) (map[string]any, *errs.Error) {
+	if err := perm.Require("profile_info.apply", ""); err != nil {
+		return nil, err
+	}
 	if !yes {
 		err := errs.Confirmation("missing_confirmation", "profile-info apply requires --yes")
 		err.Hint = "run profile-info +preview first, inspect the diff, then apply with --yes"

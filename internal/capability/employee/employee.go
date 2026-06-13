@@ -6,6 +6,7 @@ import (
 
 	"hr-cli/internal/db"
 	"hr-cli/internal/errs"
+	"hr-cli/internal/perm"
 	"hr-cli/internal/redact"
 )
 
@@ -14,6 +15,9 @@ const columns = `
 	HRBP, STATUS, DISABLED, MOBILE, EMAIL, JOINDATE, LEAVEDATE`
 
 func Find(name, badge, phone string, limit int) ([]map[string]any, bool, *errs.Error) {
+	if err := perm.Require("employee.find", ""); err != nil {
+		return nil, false, err
+	}
 	var where []string
 	var args []any
 	if name != "" {
@@ -51,6 +55,9 @@ func Find(name, badge, phone string, limit int) ([]map[string]any, bool, *errs.E
 }
 
 func Get(eid int) (map[string]any, *errs.Error) {
+	if err := perm.Require("employee.get", fmt.Sprint(eid)); err != nil {
+		return nil, err
+	}
 	row, err := db.QueryOne(fmt.Sprintf("SELECT %s, CERTNO FROM eemployee WHERE EID=?", columns), eid)
 	if err != nil {
 		return nil, err

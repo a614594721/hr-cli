@@ -14,6 +14,7 @@ import (
 	"hr-cli/internal/capability/employee"
 	"hr-cli/internal/db"
 	"hr-cli/internal/errs"
+	"hr-cli/internal/perm"
 	"hr-cli/internal/preview"
 )
 
@@ -25,6 +26,9 @@ const (
 )
 
 func Preview(badge string, dept, job int, effectDate, reason string) (preview.Payload, *errs.Error) {
+	if err := perm.Require("transfer.preview", ""); err != nil {
+		return preview.Payload{}, err
+	}
 	target, err := employee.ByBadge(badge)
 	if err != nil {
 		return preview.Payload{}, err
@@ -65,6 +69,9 @@ func Preview(badge string, dept, job int, effectDate, reason string) (preview.Pa
 }
 
 func Apply(previewID string, yes, dryRun bool) (map[string]any, *errs.Error) {
+	if err := perm.Require("transfer.apply", ""); err != nil {
+		return nil, err
+	}
 	if !yes && !dryRun {
 		err := errs.Confirmation("missing_confirmation", "transfer apply requires --yes or --dry-run")
 		err.Hint = "use --dry-run to inspect the apply preflight without writing"

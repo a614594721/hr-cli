@@ -1,10 +1,12 @@
 package attendance
 
 import (
+	"strconv"
 	"strings"
 
 	"hr-cli/internal/db"
 	"hr-cli/internal/errs"
+	"hr-cli/internal/perm"
 )
 
 const recordColumns = `
@@ -13,6 +15,9 @@ const recordColumns = `
 	AMOUNT_1541, AMOUNT_1543, AMOUNT_1571`
 
 func Records(badge string, eid int, from, to string, limit int) ([]map[string]any, *errs.Error) {
+	if err := perm.Require("attendance.records.query", targetEID(eid)); err != nil {
+		return nil, err
+	}
 	if badge == "" && eid == 0 {
 		return nil, errs.Validation("missing_target", "provide --badge or --eid")
 	}
@@ -39,6 +44,9 @@ func Records(badge string, eid int, from, to string, limit int) ([]map[string]an
 }
 
 func Summary(badge string, dept int, date string, limit int) ([]map[string]any, *errs.Error) {
+	if err := perm.Require("attendance.summary.query", ""); err != nil {
+		return nil, err
+	}
 	var where []string
 	var args []any
 	if badge != "" {
@@ -72,6 +80,9 @@ func Summary(badge string, dept int, date string, limit int) ([]map[string]any, 
 }
 
 func Exceptions(badge string, dept int, from, to string, limit int) ([]map[string]any, *errs.Error) {
+	if err := perm.Require("attendance.exception.query", ""); err != nil {
+		return nil, err
+	}
 	where := []string{"a.REMARK IS NOT NULL", "a.REMARK <> ''"}
 	var args []any
 	join := ""
@@ -102,6 +113,13 @@ func Exceptions(badge string, dept int, from, to string, limit int) ([]map[strin
 		ORDER BY a.TERM DESC
 		LIMIT ?`
 	return db.QueryRows(query, args...)
+}
+
+func targetEID(eid int) string {
+	if eid == 0 {
+		return ""
+	}
+	return strconv.Itoa(eid)
 }
 
 func positiveLimit(value, fallback int) int {

@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"hr-cli/internal/auth"
+	"hr-cli/internal/perm"
 )
 
 func newPermCommand() *cobra.Command {
@@ -13,15 +13,7 @@ func newPermCommand() *cobra.Command {
 	explain := &cobra.Command{
 		Use: "explain",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			operator := auth.CurrentOperator()
-			decision := "limited"
-			if operator.Role == "HR_ADMIN" {
-				decision = "allow"
-			}
-			return emit(cmd, map[string]any{
-				"action": action, "target_eid": targetEID, "operator": operator,
-				"decision": decision, "reason": "V1a permission engine uses environment role only",
-			})
+			return emit(cmd, perm.Explain(action, targetEID))
 		},
 	}
 	explain.Flags().StringVar(&action, "action", "", "permission action")
