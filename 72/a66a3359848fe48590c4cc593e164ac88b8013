@@ -1,0 +1,50 @@
+internal/auth/auth.go
+  s_6278b699cd9e9b::t_aa0473b4a8f374 3-7,20,40-42,46-53,55
+  s_6278b699cd9e9b::t_5d4bbabf99f26a 19,28,35-38,45
+docs/transfer-apply-safety.md
+  s_7be72006deb3f3::t_06e1bcda93a8cc 3,17,23-30,77,81-87,91,98-110,114,116-119
+docs/db-capability-inventory.md
+  s_7be72006deb3f3::t_06e1bcda93a8cc 54-56,66
+internal/db/db.go
+  s_6278b699cd9e9b::t_8bacd484a43404 16,29,31-34,36-39,238-245
+  s_7be72006deb3f3::t_e38e1f912aa1f4 133-171
+internal/audit/audit.go
+  s_7be72006deb3f3::t_e38e1f912aa1f4 1-36
+internal/capability/transfer/transfer.go
+  s_7be72006deb3f3::t_8a9bb0ca63b25c 118-122
+  s_7be72006deb3f3::t_d907f87aa2ad35 4-5,10,12,20-21,24-25,90,160-178,186-189,193-246,248-252,254-258,260-280,289-443
+  s_7be72006deb3f3::t_e17af90872147d 22-23
+  s_7be72006deb3f3::t_3f6bf9614ff64a 247,253,259,281-288
+cmd/root.go
+  s_6278b699cd9e9b::t_b7162ca8993747 57-59
+docs/command-contract.md
+  s_7be72006deb3f3::t_06e1bcda93a8cc 54,83
+internal/runtime/config.go
+  s_6278b699cd9e9b::t_6a125b8da6e566 1-172
+cmd/config.go
+  s_6278b699cd9e9b::t_1e6e7fefe57530 1-98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "72a66a3359848fe48590c4cc593e164ac88b8013",
+  "prompts": {},
+  "sessions": {
+    "s_6278b699cd9e9b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ec18c-75dd-7c80-bc63-8e420037c742",
+        "model": "gpt-5.5"
+      },
+      "human_author": "wubang <614594721@qq.com>"
+    },
+    "s_7be72006deb3f3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ec157-1d72-7df0-b37e-eff240fe4561",
+        "model": "gpt-5.5"
+      },
+      "human_author": "wubang <614594721@qq.com>"
+    }
+  }
+}
