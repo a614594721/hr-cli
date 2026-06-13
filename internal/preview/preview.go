@@ -29,7 +29,7 @@ func Save(kind string, plan any) (Payload, *errs.Error) {
 		PreviewID: id,
 		Kind:      kind,
 		CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
-		Plan:      plan,
+		Plan:      clean(plan),
 	}
 	path := filepath.Join(dir, id+".json")
 	data, err := json.MarshalIndent(payload, "", "  ")
@@ -40,6 +40,35 @@ func Save(kind string, plan any) (Payload, *errs.Error) {
 		return Payload{}, errs.Config("preview_store_failed", err.Error())
 	}
 	return payload, nil
+}
+
+func clean(value any) any {
+	switch v := value.(type) {
+	case time.Time:
+		return v.Format("2006-01-02 15:04:05")
+	case map[string]any:
+		out := make(map[string]any, len(v))
+		for key, item := range v {
+			out[key] = clean(item)
+		}
+		return out
+	case []map[string]any:
+		out := make([]map[string]any, 0, len(v))
+		for _, row := range v {
+			out = append(out, clean(row).(map[string]any))
+		}
+		return out
+	case []string:
+		return v
+	case []any:
+		out := make([]any, 0, len(v))
+		for _, item := range v {
+			out = append(out, clean(item))
+		}
+		return out
+	default:
+		return v
+	}
 }
 
 func Load(id string) (Payload, *errs.Error) {

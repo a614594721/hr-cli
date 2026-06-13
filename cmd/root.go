@@ -16,6 +16,7 @@ import (
 const version = "0.1.0-v1a"
 
 var format string
+var currentCommand string
 
 func Execute() int {
 	root := NewRoot()
@@ -43,6 +44,7 @@ func NewRoot() *cobra.Command {
 	}
 	root.PersistentFlags().StringVar(&format, "format", "json", "output format: json or table")
 	root.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		currentCommand = commandName(cmd)
 		if format != "json" && format != "table" {
 			err := errs.Validation("invalid_format", "--format must be json or table")
 			err.Param = "--format"
@@ -69,8 +71,12 @@ func emit(cmd *cobra.Command, data any) error {
 }
 
 func meta(cmd *cobra.Command) output.Meta {
+	command := commandName(cmd)
+	if command == "" {
+		command = currentCommand
+	}
 	meta := output.Meta{
-		"command": commandName(cmd),
+		"command": command,
 		"version": version,
 		"format":  format,
 	}
