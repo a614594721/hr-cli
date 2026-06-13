@@ -16,10 +16,10 @@ import (
 type Meta map[string]any
 
 type Envelope struct {
-	OK    bool        `json:"ok"`
-	Data  any         `json:"data,omitempty"`
-	Error any         `json:"error,omitempty"`
-	Meta  Meta        `json:"meta"`
+	OK    bool `json:"ok"`
+	Data  any  `json:"data,omitempty"`
+	Error any  `json:"error,omitempty"`
+	Meta  Meta `json:"meta"`
 }
 
 func Success(w io.Writer, data any, meta Meta, format string) error {
