@@ -1,0 +1,29 @@
+skills/hr-shared/SKILL.md
+  s_6278b699cd9e9b::t_7915b6ddc93d2c 1-13
+skills/hr-employee/SKILL.md
+  s_6278b699cd9e9b::t_7915b6ddc93d2c 1-17
+skills/hr-transfer/SKILL.md
+  s_6278b699cd9e9b::t_7915b6ddc93d2c 1-17
+skills/hr-approval/SKILL.md
+  s_6278b699cd9e9b::t_7915b6ddc93d2c 1-24
+skills/hr-attendance/SKILL.md
+  s_6278b699cd9e9b::t_7915b6ddc93d2c 1-16
+skills/hr-profile-info/SKILL.md
+  s_6278b699cd9e9b::t_7915b6ddc93d2c 1-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "2b4ac2c62c29b06fbca3f9393ec1599ebdc89134",
+  "prompts": {},
+  "sessions": {
+    "s_6278b699cd9e9b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ec18c-75dd-7c80-bc63-8e420037c742",
+        "model": "gpt-5.5"
+      },
+      "human_author": "wubang <614594721@qq.com>"
+    }
+  }
+}
