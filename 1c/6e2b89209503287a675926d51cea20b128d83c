@@ -1,0 +1,34 @@
+internal/capability/approval/approval.go
+  s_6278b699cd9e9b::t_6ae917c9e80b7a 11,15-17,46-48,69-71,105-107,144-154
+internal/capability/attendance/attendance.go
+  s_6278b699cd9e9b::t_04a0abea138aca 4
+  s_6278b699cd9e9b::t_77f86bab553d00 9,18-20,47-49,83-85,118-122
+cmd/perm.go
+  s_6278b699cd9e9b::t_22a49f2ef964fe 6,16
+internal/capability/profileinfo/profileinfo.go
+  s_6278b699cd9e9b::t_ba69cf8660a2ef 15,47-49,117-119
+internal/capability/transfer/transfer.go
+  s_6278b699cd9e9b::t_861cb8978cbfea 17,29-31,72-74
+internal/perm/perm.go
+  s_6278b699cd9e9b::t_9b414dda75796b 28-30
+  s_6278b699cd9e9b::t_1222b576ca4cba 1-27,31-33,48-50,60-109
+  s_6278b699cd9e9b::t_1625b51e3a5e7f 34-47,51-59
+internal/capability/employee/employee.go
+  s_6278b699cd9e9b::t_ff1d66965a45fd 9,18-20,58-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "1c6e2b89209503287a675926d51cea20b128d83c",
+  "prompts": {},
+  "sessions": {
+    "s_6278b699cd9e9b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ec18c-75dd-7c80-bc63-8e420037c742",
+        "model": "gpt-5.5"
+      },
+      "human_author": "wubang <614594721@qq.com>"
+    }
+  }
+}
