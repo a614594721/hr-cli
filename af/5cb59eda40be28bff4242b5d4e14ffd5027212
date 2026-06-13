@@ -1,0 +1,36 @@
+README.md
+  s_29a54643358202::t_b241d608d1e589 12-30,356-361
+  s_7be72006deb3f3::t_127efdebd56626 5,66,70-72,74,77-78,84-86,89,92
+cmd/root.go
+  s_7be72006deb3f3::t_956e71df68cd78 19,47,74-77,79
+.gitignore
+  s_7be72006deb3f3::t_fa708e8d75ce04 7
+docs/command-contract.md
+  s_7be72006deb3f3::t_127efdebd56626 6,19-22,28-31,37-39,45-46,52-53,59,65
+internal/preview/preview.go
+  s_7be72006deb3f3::t_0bb45e3b3e19dc 32,45-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "af5cb59eda40be28bff4242b5d4e14ffd5027212",
+  "prompts": {},
+  "sessions": {
+    "s_29a54643358202": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ec114-6145-7740-a897-9830286c01ca",
+        "model": "gpt-5.5"
+      },
+      "human_author": "wubang <614594721@qq.com>"
+    },
+    "s_7be72006deb3f3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ec157-1d72-7df0-b37e-eff240fe4561",
+        "model": "gpt-5.5"
+      },
+      "human_author": "wubang <614594721@qq.com>"
+    }
+  }
+}
