@@ -5,7 +5,9 @@
 当前项目处于产品方案和框架设计阶段，详细落地方案见：
 
 - [v4 方案：DB-backed HR 能力网关](docs/hr-cli-plan-lark-v4.md)
-- [v3 方案：借鉴 Lark-CLI 框架](docs/hr-cli-plan-lark-v3.md)
+- [数据库能力盘点](docs/db-capability-inventory.md)
+- [命令契约](docs/command-contract.md)
+- [错误契约](docs/error-contract.md)
 
 [定位](#为什么做-hr-cli) · [能力](#功能范围) · [快速开始](#安装与快速开始) · [命令体系](#三层命令体系) · [鉴权](#鉴权与权限) · [安全](#安全与风险提示) · [开发](#开发计划)
 
@@ -43,17 +45,39 @@
 
 ## 安装与快速开始
 
-项目尚未进入可安装版本。目标技术栈如下：
+当前仓库已提供 V1a 可运行实现。目标技术栈仍是 Go + Cobra；在本机 `go` 不可用的情况下，V1a 先用 Python 落地同一套命令契约、输出协议和 capability 分层。
+
+V1a 运行依赖：
+
+- Python 3.13+
+- PyMySQL
+- tabulate（可选，用于 `--format table`）
+
+安装依赖：
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+运行：
+
+```bash
+python hr.py doctor
+python hr.py auth +me
+python hr.py employee +find --badge A00123
+```
+
+后续 Go 版本目标技术栈如下：
 
 - Go 1.23+
 - Cobra / pflag
 - MySQL driver
 - OS 原生密钥链或 Windows Credential Manager
 
-目标安装形态：
+后续目标安装形态：
 
 ```bash
-# 源码构建，后续补充 Makefile
+# 源码构建，后续补充 Go/Cobra 实现和 Makefile
 git clone <repo-url>
 cd hr-cli
 go build -o hr.exe .

@@ -1,7 +1,7 @@
 # hr-cli 方案 v4：基于 Lark-CLI 框架的 DB-backed HR 能力网关
 
-> 本文档是对 `hr-cli-plan-lark-v3.md` 的补充和修订。
-> 新增输入：产品初始能力不止人员调动和个人资料修改，还包括员工信息查询、审批流操作、打卡信息查询；系统底层基于 MySQL，没有原生 OpenAPI。
+> 本文档是当前产品落地基线。
+> 产品初始能力不止人员调动和个人资料修改，还包括员工信息查询、审批流操作、打卡信息查询；系统底层基于 MySQL，没有原生 OpenAPI。
 
 ## 0. 结论
 
@@ -435,9 +435,9 @@ D:\projects\hr-cli\
 - `approval +approve/+reject/+transfer`。
 - dry-run / confirmation / audit。
 
-## 9. 需要调整 v3 的地方
+## 9. 旧方案结论的吸收和调整
 
-v3 的这些结论保留：
+这些结论保留：
 
 - Go + Cobra。
 - Lark-CLI 风格命令框架。
@@ -447,7 +447,7 @@ v3 的这些结论保留：
 - preview/apply。
 - raw 写库禁止。
 
-v3 需要补充或改名：
+需要补充或改名：
 
 - `person` 改成 `employee`，更贴近产品域。
 - 第二层从 `API commands` 改成 `DB Capability Commands`。

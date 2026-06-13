@@ -9,38 +9,41 @@ c = pymysql.connect(
 )
 cur = c.cursor()
 
-def show(t):
-    print(f"\n========== {t} ==========")
-    try:
-        cur.execute(f"SELECT COUNT(*) FROM `{t}`")
-        n = cur.fetchone()[0]
-        print(f"rows: {n}")
-    except Exception as e:
-        print(f"count err: {e}")
-        return
-    try:
-        cur.execute(f"SHOW COLUMNS FROM `{t}`")
-        cols = cur.fetchall()
-        print(f"columns: {len(cols)}")
-        for col in cols[:60]:
-            print(f"  {col[0]:<30} {col[1]:<25} null={col[2]:<4} key={col[3]:<4}")
-        if len(cols) > 60:
-            print(f"  ... {len(cols)-60} more columns")
-    except Exception as e:
-        print(f"col err: {e}")
+# 看 eEmployee_Work 关键列 + 行数
+print("=== eEmployee_Work ===")
+cur.execute("SELECT COUNT(*) FROM eEmployee_Work")
+print("rows:", cur.fetchone()[0])
+cur.execute("SHOW COLUMNS FROM eEmployee_Work")
+for col in cur.fetchall():
+    print(f"  {col[0]:<25} {col[1]:<22} null={col[2]}")
 
-# 主员工表
-show("eemployee")
-# 部门/组织
-show("odepartment")
-show("ocompany")
-# 调动相关
-show("echange")
-show("eemp_change")
-show("eemployee_emp")
-# 字典
-show("ecd_empchangetype")
-show("ecd_empchangereason")
-show("ecd_orgchangetype")
+# eSP_EmpChangeStart 入参
+print("\n=== eSP_EmpChangeStart 参数 ===")
+cur.execute("""SELECT parameter_name, data_type, parameter_mode
+    FROM information_schema.parameters
+    WHERE specific_schema=%s AND specific_name='eSP_EmpChangeStart'
+    ORDER BY ordinal_position""", (os.environ['DB_NAME'],))
+for r in cur.fetchall():
+    print(f"  {r[2]:<6} {r[0]:<15} {r[1]}")
+
+# personal_info 列
+print("\n=== personal_info 列 ===")
+cur.execute("SHOW COLUMNS FROM personal_info")
+for col in cur.fetchall():
+    print(f"  {col[0]:<25} {col[1]:<22}")
+
+# users 列
+print("\n=== users 列 ===")
+cur.execute("SHOW COLUMNS FROM users")
+for col in cur.fetchall():
+    print(f"  {col[0]:<25} {col[1]:<22}")
+
+# employee_dingding
+print("\n=== employee_dingding 列 + 行数 ===")
+cur.execute("SELECT COUNT(*) FROM employee_dingding")
+print("rows:", cur.fetchone()[0])
+cur.execute("SHOW COLUMNS FROM employee_dingding")
+for col in cur.fetchall():
+    print(f"  {col[0]:<25} {col[1]:<22}")
 
 c.close()
