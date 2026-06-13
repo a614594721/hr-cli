@@ -1,0 +1,33 @@
+README.md
+  s_6278b699cd9e9b::t_98682cb881061f 167-168
+docs/command-contract.md
+  s_6278b699cd9e9b::t_f9e40f69bedde7 46,48-51,86
+internal/errs/errors.go
+  s_6278b699cd9e9b::t_536bc75431f015 28-31
+cmd/approval.go
+  s_6278b699cd9e9b::t_8d9ff53e02cc69 40-56,60-63,67-71,74-80
+internal/db/db.go
+  s_6278b699cd9e9b::t_6a4c3d6b4d232c 236-242
+internal/capability/approval/approval.go
+  s_6278b699cd9e9b::t_9d60f33e60a906 4-8,20-29,61-154
+docs/db-capability-inventory.md
+  s_6278b699cd9e9b::t_583b150d21fac1 13,95-96,107-108,112
+docs/error-contract.md
+  s_6278b699cd9e9b::t_192d26ad8a8e4d 45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "dc9abb25d26e27132004ae0cb3b919eae83b7162",
+  "prompts": {},
+  "sessions": {
+    "s_6278b699cd9e9b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ec18c-75dd-7c80-bc63-8e420037c742",
+        "model": "gpt-5.5"
+      },
+      "human_author": "wubang <614594721@qq.com>"
+    }
+  }
+}
