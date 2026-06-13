@@ -50,6 +50,7 @@ Transfer preview:
 
 ```bash
 hr transfer +preview --badge A00123 --dept 1001 --job 2002 --effect-date 2026-06-20 --reason "组织调整"
+hr transfer +apply <preview-id> --dry-run
 hr transfer preview show <preview-id>
 ```
 
@@ -71,10 +72,11 @@ Only `SELECT`, `SHOW`, `DESCRIBE`, `DESC`, and `EXPLAIN` are allowed. `CALL`, DD
 
 These commands return typed policy errors in V1a:
 
-- `transfer +apply`
 - `profile-info +apply`
 - `approval +approve`
 - `approval +reject`
 - `approval +transfer`
 
 They require verified database write chains, state-machine checks, audit records, and concurrency protection before activation.
+
+`transfer +apply <preview-id> --dry-run` is implemented as a preflight-only command. Real native write execution remains disabled.

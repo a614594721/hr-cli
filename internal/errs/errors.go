@@ -33,6 +33,10 @@ func Authorization(subtype, message string) *Error {
 	return New("authorization", subtype, message, 3)
 }
 
+func Confirmation(subtype, message string) *Error {
+	return New("confirmation", subtype, message, 3)
+}
+
 func DB(subtype, message string) *Error {
 	return New("db", subtype, message, 4)
 }

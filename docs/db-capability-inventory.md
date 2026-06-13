@@ -44,15 +44,24 @@ Primary checked objects:
 - `eSP_EmpChangeStart(P_ID int, P_URID int, OUT P_Retval int)`
 - `eSP_EmpChangeAdd(P_EID int, P_xType int, P_FromDate datetime, P_RefID int, P_URID int, OUT P_RetVal int)`
 - `eSP_EmpChangeCheck(P_ID int, P_URID int, P_TableName varchar, P_FMID int, OUT P_RetVal int)`
+- `eSP_EmpChangeCancel(P_ID int, P_UEID int, OUT P_RetVal int)`
+
+Additional read-only findings:
+
+- `eSP_EmpChangeAdd` copies the full employee snapshot from `eemployee` into `eemployee_work`; CLI code should not manually insert a partial staging row.
+- `eSP_EmpChangeStart` writes `eemployee_work_all`, deletes the active `eemployee_work` row, calls refresh/sync routines, and can trigger webhooks.
+- `eSP_EmpChangeStart` returns `910020` if the work row has not been initialized.
+- Recent active staging rows show `XTYPE=12` for current batch change/transfer-like rows; final apply enablement still needs confirmed type mapping.
 
 V1a command mapping:
 
 - `hr transfer +preview --badge ...`
+- `hr transfer +apply <preview-id> --dry-run`
 - `hr transfer preview show <preview-id>`
 
 Safety conclusion:
 
-- Apply is intentionally not implemented in V1a. Before apply, confirm required `eemployee_work` defaults, status transitions, stored procedure return codes, and post-apply verification in `eemployee` / history tables.
+- Native apply execution remains disabled. The current apply command performs preflight only. Before enabling writes, confirm `P_xType`, `P_RefID`, `P_TableName`, `P_FMID`, initialization/check sequence, operator `P_URID`, audit logging, and post-apply verification in `eemployee` / history tables.
 
 ## Profile Info
 

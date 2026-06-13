@@ -4,7 +4,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"hr-cli/internal/capability/transfer"
-	"hr-cli/internal/errs"
 	"hr-cli/internal/preview"
 )
 
@@ -29,14 +28,21 @@ func newTransferCommand() *cobra.Command {
 	prev.Flags().StringVar(&reason, "reason", "", "change reason")
 	_ = prev.MarkFlagRequired("badge")
 
+	var yes bool
+	var dryRun bool
 	apply := &cobra.Command{
 		Use:  "+apply <preview-id>",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return errs.Policy("apply_not_implemented", "transfer apply is intentionally not implemented in V1a")
+			data, err := transfer.Apply(args[0], yes, dryRun)
+			if err != nil {
+				return err
+			}
+			return emit(cmd, data)
 		},
 	}
-	apply.Flags().Bool("yes", false, "confirm apply")
+	apply.Flags().BoolVar(&yes, "yes", false, "confirm apply")
+	apply.Flags().BoolVar(&dryRun, "dry-run", false, "run apply preflight without writing")
 
 	show := &cobra.Command{Use: "preview", Short: "preview helpers"}
 	showShow := &cobra.Command{

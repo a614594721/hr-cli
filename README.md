@@ -8,6 +8,7 @@
 - [数据库能力盘点](docs/db-capability-inventory.md)
 - [命令契约](docs/command-contract.md)
 - [错误契约](docs/error-contract.md)
+- [调动 apply 安全计划](docs/transfer-apply-safety.md)
 
 [背景](#项目背景与愿景) · [定位](#为什么做-hr-cli) · [能力](#功能范围) · [快速开始](#安装与快速开始) · [命令体系](#三层命令体系) · [鉴权](#鉴权与权限) · [安全](#安全与风险提示) · [开发](#开发计划)
 

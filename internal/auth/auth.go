@@ -4,6 +4,7 @@ import "os"
 
 type Operator struct {
 	EID    string `json:"eid,omitempty"`
+	URID   string `json:"urid,omitempty"`
 	Badge  string `json:"badge,omitempty"`
 	Name   string `json:"name"`
 	Role   string `json:"role"`
@@ -28,6 +29,7 @@ func CurrentOperator() Operator {
 	}
 	return Operator{
 		EID:    os.Getenv("HR_OPERATOR_EID"),
+		URID:   os.Getenv("HR_OPERATOR_URID"),
 		Badge:  os.Getenv("HR_OPERATOR_BADGE"),
 		Name:   name,
 		Role:   role,
