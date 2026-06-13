@@ -1,0 +1,23 @@
+README.md
+  s_0f65dec0a8371a::t_91cd13009f80ba 1-410
+docs/hr-cli-plan-lark-v4.md
+  s_0f65dec0a8371a::t_23bc9162ebdc35 1-468
+docs/hr-cli-plan-lark-v3.md
+  s_0f65dec0a8371a::t_c2e5a1421e088d 1-570
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ca0151370cb44e003aa40daa6e2e25d382acfc7a",
+  "prompts": {},
+  "sessions": {
+    "s_0f65dec0a8371a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ec142-0ade-71f3-b908-40a4067979b6",
+        "model": "gpt-5.5"
+      },
+      "human_author": "wubang <614594721@qq.com>"
+    }
+  }
+}
