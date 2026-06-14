@@ -1,11 +1,11 @@
-# hr-cli 方案 v4：基于 Lark-CLI 框架的 DB-backed HR 能力网关
+# hr-cli 产品设计方案：基于 Lark-CLI 框架的 DB-backed HR 能力网关
 
 > 本文档是当前产品落地基线。
 > 产品初始能力不止人员调动和个人资料修改，还包括员工信息查询、审批流操作、打卡信息查询；系统底层基于 MySQL，没有原生 OpenAPI。
 
 ## 0. 结论
 
-方案需要继续补充，但方向不变。
+方案方向不变；鉴权方案已经基于实际实现收敛为“外部 Auth Broker + 本机安全 token 存储”的形态。
 
 借鉴 Lark-CLI 时，不能照搬它的“OpenAPI 元数据 -> API 命令 -> Raw API”模型，因为 HR 系统没有原生 API。我们应该借鉴的是它的框架思想：
 
@@ -15,6 +15,7 @@
 - 安全策略在框架层统一执行。
 - 高风险操作必须 dry-run / preview / apply。
 - 凭证、profile、审计、doctor、skills 都是一等能力。
+- 用户 OAuth 只用于确认操作者身份；HR 业务权限仍由 CLI 的 Permission Engine 和 DB Capability Layer 统一执行。
 
 对 HR CLI 来说，三层命令应调整为：
 
@@ -111,24 +112,70 @@ AttendanceCapability
 
 命令层只调用 capability，不直接拼业务 SQL。
 
+### 2.3 已落地鉴权架构
+
+当前产品采用 `bi_ehr` 作为 hr-cli Auth Broker，CLI 不直接持有钉钉应用密钥。
+
+```text
+hr-cli
+  -> POST /api/hr-cli/auth/login/start
+  -> 打开 /auth/hr-cli/start?login_id=...
+  -> bi_ehr 跳转钉钉 OAuth
+  -> 钉钉回调 /auth/hr-cli/callback
+  -> bi_ehr 映射 DingTalk userid -> employee EID
+  -> bi_ehr 计算 HR role 并签发 access token + refresh token
+  -> hr-cli 轮询 /api/hr-cli/auth/login/poll
+  -> hr-cli 将 token 写入 OS 安全凭证存储
+```
+
+边界：
+
+- 钉钉 `client_id/client_secret/corp_id` 只存在于 `bi_ehr` 服务端。
+- `hr-cli` 只接收业务访问用的 `access_token` 和 `refresh_token`，不接触钉钉密钥。
+- `access_token` 是短期 JWT，用于请求 broker 的 `/me` 校验。
+- `refresh_token` 是长生命周期 opaque token，服务端只保存 hash，并在每次 refresh 时轮换。
+- 服务端 refresh token 当前落 MySQL 表 `hr_cli_auth_refresh_tokens`，不是 Redis；如后续需要集中会话 TTL、批量失效和运维可观测性，可再迁移或同步到 Redis。
+
+客户端本地存储借鉴 Lark-CLI：
+
+- `access_token` / `refresh_token` 存 OS 安全凭证存储。
+- Windows 使用 Windows Credential Manager。
+- 非 Windows 使用本地 AES-GCM 加密文件。
+- `.hr-cli/session.json` 只保留 EID、URID、工号、姓名、角色、Auth Broker URL、token 过期时间等非敏感身份摘要。
+- 如果旧 `session.json` 曾残留明文 token，读取 session 时会重写为去敏版本；旧 token 不迁移，用户需要重新登录。
+
+token 生命周期：
+
+- token 状态分为 `valid`、`needs_refresh`、`expired`、`missing`。
+- access token 过期前 5 分钟进入 `needs_refresh`。
+- refresh 使用 `.hr-cli/locks` 下的跨进程锁，避免多个 CLI 命令同时刷新同一个可轮换 refresh token。
+- refresh token 过期或被 broker 明确拒绝时，本地 token 清理并要求重新 `auth +login --dingtalk`。
+
 ## 3. 命令设计修订
 
 ### 3.1 Auth
 
 ```bash
 hr auth +login
+hr auth +login --dingtalk --auth-base-url https://your-domain.example.com
+hr auth +login --dingtalk --no-wait
+hr auth +login --dingtalk --login-id <login_id> --login-secret <login_secret>
 hr auth +me
 hr auth +logout
 hr auth status
+hr auth status --verify
 hr perm explain --action transfer.apply --target-eid 12345
 ```
 
 规则：
 
 - 鉴权通过后才能操作有权限的人员。
-- 钉钉或企业身份只解决“操作者是谁”。
+- 钉钉 OAuth 只解决“操作者是谁”，且只在首次登录或 refresh token 失效后需要用户浏览器参与。
 - HR CLI 的 Permission Engine 负责“能不能操作这个人、这个动作、这些字段”。
 - apply 类命令必须在执行前重新解析 operator，不能复用 preview 阶段鉴权结果。
+- `auth status` 默认只读本地 session/token 状态，不主动联网刷新。
+- `auth status --verify` 会访问 Auth Broker，并可能触发 access token 刷新。
+- `--no-wait` 用于 Agent/远程 shell 场景：先返回登录 URL 和 `login_id/login_secret`，用户完成浏览器授权后再用 resume 命令继续轮询并写入本机安全凭证。
 
 ### 3.2 Employee
 
@@ -334,7 +381,8 @@ V1 如果异常计算复杂，可以先提供原始打卡记录查询，再做 s
 | skills | HR Agent runbooks |
 | dry-run | preview 或只读执行计划 |
 | typed errors | HR CLI error envelope |
-| keychain | session token / local credential storage |
+| keychain | OS secure credential storage for access/refresh tokens |
+| device/no-wait login | DingTalk OAuth broker login with `--no-wait` and resume polling |
 
 ## 7. 目录结构修订
 
@@ -365,6 +413,7 @@ D:\projects\hr-cli\
 │   │   ├── approval/
 │   │   └── attendance/
 │   ├── auth/
+│   ├── keychain/
 │   ├── perm/
 │   ├── db/
 │   ├── preview/
@@ -405,7 +454,11 @@ D:\projects\hr-cli\
 
 ### M2：鉴权和员工查询
 
-- `auth +login/+me`。
+- `auth +login/+me/+logout/status`。
+- 钉钉 OAuth Broker 登录。
+- OS 安全凭证存储 access/refresh token。
+- token 自动刷新、刷新锁、过期清理。
+- `auth status --verify`。
 - operator identity。
 - Permission Engine 初版。
 - `employee +find/get`。

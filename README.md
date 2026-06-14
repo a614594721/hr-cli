@@ -4,7 +4,7 @@
 
 当前项目已提供 Go/Cobra V1a 可运行实现，详细落地方案见：
 
-- [v4 方案：DB-backed HR 能力网关](docs/hr-cli-plan-lark-v4.md)
+- [hr-cli 产品设计方案](docs/hr-cli产品设计方案.md)
 - [数据库能力盘点](docs/db-capability-inventory.md)
 - [命令契约](docs/command-contract.md)
 - [错误契约](docs/error-contract.md)

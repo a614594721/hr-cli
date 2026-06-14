@@ -2,7 +2,7 @@
 
 ## Scope
 
-This audit checks the implementation against `docs/hr-cli-plan-lark-v4.md` after the v4 feature work.
+This audit checks the implementation against `docs/hr-cli产品设计方案.md` after the v4 feature work.
 
 Environment:
 
