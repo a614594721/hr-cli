@@ -1,0 +1,20 @@
+AGENTS.md
+  s_b84eb3b90b005d::t_cf4a269cfb506b 8-10
+  s_b84eb3b90b005d::t_9949b61ea7aeaf 3-7,11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "85c773c615e51a40b480f6a7cd2b6389cdcfccfe",
+  "prompts": {},
+  "sessions": {
+    "s_b84eb3b90b005d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1a19ba77-6f5d-4864-92fa-a23d64f34cb6",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "wubang <614594721@qq.com>"
+    }
+  }
+}
