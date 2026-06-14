@@ -120,7 +120,14 @@ func RawQuery(sqlText string, args []string, limit int) ([]map[string]any, *errs
 	for _, arg := range args {
 		params = append(params, arg)
 	}
-	rows, err := QueryRows(strings.ReplaceAll(sqlText, "?", "?"), params...)
+	query := strings.TrimSpace(sqlText)
+	first := strings.ToLower(regexp.MustCompile(`(?i)^[a-z]+`).FindString(query))
+	if first == "select" && limit > 0 {
+		query = strings.TrimRight(query, "; \t\r\n")
+		query = "SELECT * FROM (" + query + ") AS hr_cli_raw LIMIT ?"
+		params = append(params, limit)
+	}
+	rows, err := QueryRows(query, params...)
 	if err != nil {
 		return nil, err
 	}

@@ -53,6 +53,26 @@ Still needed:
 - MANAGER direct-report scope checks.
 - Approval node-level permission checks beyond current task handler dry-run reporting.
 
+## Transfer End-to-end Write Test
+
+Status: implementation and dry-run preflight are complete; live `--yes` end-to-end test needs a disposable employee.
+
+Verified:
+
+- Preview creation.
+- Dry-run preflight.
+- Required `HR_OPERATOR_URID` behavior.
+- Old-value match checks.
+- Open same-type work-row check.
+- Effective department/job change check.
+
+Still needed:
+
+- Select a dedicated test employee that can be safely moved.
+- Define the before/after department and job IDs.
+- Define the rollback path, either through a reverse transfer or database restore procedure.
+- Run `transfer +apply --yes` against that employee and verify `eemployee`, `eemployee_work`, `eemployee_work_all`, audit output, and downstream hooks.
+
 ## Credential Backend
 
 Status: profile metadata and credential references implemented; secrets are not stored.
@@ -61,4 +81,3 @@ Still needed:
 
 - Native Windows Credential Manager integration from Go, or a documented external credential helper contract.
 - Session token storage if future auth is not environment/profile based.
-

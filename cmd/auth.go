@@ -19,13 +19,22 @@ func newAuthCommand() *cobra.Command {
 	root.AddCommand(&cobra.Command{
 		Use: "+login",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return emit(cmd, map[string]any{"status": "stub", "operator": auth.CurrentOperator(), "message": "environment identity is active"})
+			return emit(cmd, map[string]any{
+				"status":   "active",
+				"operator": auth.CurrentOperator(),
+				"mode":     "environment_or_profile",
+				"message":  "operator identity resolved from environment variables or active profile",
+			})
 		},
 	})
 	root.AddCommand(&cobra.Command{
 		Use: "+logout",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return emit(cmd, map[string]any{"status": "stub", "message": "environment identity has no local session to clear"})
+			return emit(cmd, map[string]any{
+				"status":  "no_session",
+				"mode":    "environment_or_profile",
+				"message": "no local auth session is stored; clear HR_OPERATOR_* environment variables or switch profile to change identity",
+			})
 		},
 	})
 	return root

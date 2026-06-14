@@ -19,7 +19,8 @@ func CurrentOperator() Operator {
 	profile, hasProfile := runtime.ActiveProfile()
 	role := firstNonEmpty(os.Getenv("HR_OPERATOR_ROLE"), profile.OperatorRole)
 	if role == "" {
-		if os.Getenv("DB_ENV") == "test" || os.Getenv("DB_ENV") == "" {
+		dbEnv := firstNonEmpty(os.Getenv("DB_ENV"), profile.DBEnv)
+		if dbEnv == "test" || (!hasProfile && dbEnv == "") {
 			role = "HR_ADMIN"
 		} else {
 			role = "SELF"
