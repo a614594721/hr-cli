@@ -25,7 +25,7 @@ Passed:
 Passed:
 
 - `auth +me`
-- `auth +login`
+- `auth +login --name 吴邦`
 - `auth +logout`
 - `credential status`
 - `perm explain --action transfer.apply --target-eid 108`
@@ -56,6 +56,7 @@ Transfer:
 - Ran `transfer +apply <preview-id> --dry-run`.
 - Without `HR_OPERATOR_URID`, dry-run correctly reported `preflight_ok=false`.
 - With temporary `HR_OPERATOR_URID=1224`, dry-run reported `preflight_ok=true`.
+- After DB-backed login as 吴邦 (`EID/URID=94`), transfer dry-run used session identity and reported `preflight_ok=true`.
 - Did not run `transfer +apply --yes` because it would create a real employee change through native stored procedures and needs a dedicated disposable test employee plus rollback plan.
 
 Approval:
@@ -94,4 +95,3 @@ Needs user confirmation before enabling further:
 - The true native approval approve/reject/transfer entrypoints.
 - Fine-grained target-scope rules for SELF, HRBP, and MANAGER beyond the current action-level permission matrix.
 - Whether auth should remain environment/profile based or must integrate a real external login/session provider.
-

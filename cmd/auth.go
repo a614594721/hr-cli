@@ -16,25 +16,33 @@ func newAuthCommand() *cobra.Command {
 			},
 		})
 	}
-	root.AddCommand(&cobra.Command{
+	var login auth.LoginRequest
+	loginCmd := &cobra.Command{
 		Use: "+login",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return emit(cmd, map[string]any{
-				"status":   "active",
-				"operator": auth.CurrentOperator(),
-				"mode":     "environment_or_profile",
-				"message":  "operator identity resolved from environment variables or active profile",
-			})
+			data, err := auth.Login(login)
+			if err != nil {
+				return err
+			}
+			return emit(cmd, data)
 		},
-	})
+	}
+	loginCmd.Flags().IntVar(&login.EID, "eid", 0, "employee EID")
+	loginCmd.Flags().StringVar(&login.Badge, "badge", "", "employee badge")
+	loginCmd.Flags().StringVar(&login.Email, "email", "", "employee email")
+	loginCmd.Flags().StringVar(&login.Phone, "phone", "", "employee phone")
+	loginCmd.Flags().StringVar(&login.Name, "name", "", "employee name")
+	loginCmd.Flags().StringVar(&login.DingUserID, "ding-userid", "", "DingTalk userid")
+	loginCmd.Flags().StringVar(&login.Role, "role", "", "operator role: SELF, HRBP, MANAGER, or HR_ADMIN")
+	root.AddCommand(loginCmd)
 	root.AddCommand(&cobra.Command{
 		Use: "+logout",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return emit(cmd, map[string]any{
-				"status":  "no_session",
-				"mode":    "environment_or_profile",
-				"message": "no local auth session is stored; clear HR_OPERATOR_* environment variables or switch profile to change identity",
-			})
+			data, err := auth.Logout()
+			if err != nil {
+				return err
+			}
+			return emit(cmd, data)
 		},
 	})
 	return root

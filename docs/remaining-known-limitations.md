@@ -75,9 +75,16 @@ Still needed:
 
 ## Credential Backend
 
-Status: profile metadata and credential references implemented; secrets are not stored.
+Status: profile metadata, credential references, and DB-backed local auth session are implemented; secrets are not stored.
+
+Implemented:
+
+- `auth +login` resolves real employee identity from `eemployee` and `employee_dingding`.
+- Session is stored locally in `.hr-cli/session.json`, which is ignored by git.
+- `auth +me`, approval `--assignee me`, and transfer apply preflight can use the session identity.
 
 Still needed:
 
 - Native Windows Credential Manager integration from Go, or a documented external credential helper contract.
-- Session token storage if future auth is not environment/profile based.
+- Password or SSO validation if future auth should verify credentials instead of resolving a trusted local employee identity.
+- Confirm the canonical mapping for `URID`. Current implementation uses `eemployee.EID`, which was verified for approval task handlers and transfer preflight identity presence.

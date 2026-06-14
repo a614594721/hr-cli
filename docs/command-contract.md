@@ -16,9 +16,11 @@ Global flags:
 Auth:
 
 ```bash
+hr auth +login --badge P000487
+hr auth +login --name 吴邦 --role HR_ADMIN
+hr auth +login --ding-userid 1835191914705266
 hr auth +me
 hr auth status
-hr auth +login
 hr auth +logout
 ```
 

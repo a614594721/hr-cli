@@ -105,7 +105,7 @@ hr config init
 hr profile add test --db-env test --db-host <host> --db-name <database> --db-user <user> --credential-target <credential-name>
 hr profile use test
 hr credential status
-hr auth +login
+hr auth +login --badge P000487
 hr auth +me
 hr doctor
 ```
@@ -122,6 +122,8 @@ DB_NAME
 ```
 
 `DB_ENV=test` 视为测试环境，可按权限执行测试库写操作。`DB_ENV != test` 时 V1 默认禁止写操作。
+
+真实登录当前采用 DB-backed session 模式：`auth +login` 从 `eemployee` 和 `employee_dingding` 解析员工身份，写入本地 `.hr-cli/session.json`；后续 `auth +me`、审批待办过滤、调动 apply preflight 都优先使用该 session。当前不使用 `users.password` 做密码登录，因为测试库中 `users` 与员工主数据存在错配风险。
 
 ## 快速示例
 
