@@ -15,6 +15,24 @@
 
 [背景](#项目背景与愿景) · [定位](#为什么做-hr-cli) · [能力](#功能范围) · [快速开始](#安装与快速开始) · [命令体系](#三层命令体系) · [鉴权](#鉴权与权限) · [安全](#安全与风险提示) · [开发](#开发计划)
 
+## 1.0 范围与边界
+
+**1.0 包含：**
+- `auth +login/+me/+logout/status`：钉钉 OAuth Broker + DB session，登录后自动从 `skysecrolemember` 反查 hr-cli 角色（HR_ADMIN > SSC > HRBP > MANAGER > SELF）。
+- `employee +find/get`：HRBP/MANAGER 自动按 `psoradiationrangeeidlist` 范围过滤；HR_ADMIN/SSC 旁路。
+- `attendance +records/+summary/+exceptions`：只读三件套，`--badge` 与 `--eid` 路径都过 scope 闸门。
+- `approval +tasks/+task/+instances`：只读查询。
+- `transfer +preview`、`transfer +apply --dry-run`：含 scope 越权拦截。
+- `transfer +apply --yes`：技术上可用，但首次端到端写库需要业务侧提供一次性测试员工 + 回滚方案（参见 `docs/remaining-known-limitations.md`）。
+- `profile-info +preview/+apply`：no-op 写已审计通过；scope 闸门待 1.0.x 补齐。
+- `db query`：仅 SELECT/SHOW/DESCRIBE/EXPLAIN 单语句只读诊断。
+- `perm explain`：动作 + scope 双闸解释。
+
+**1.0 不包含：**
+- `approval +approve/+reject/+transfer --yes`：原生审批状态机入口未核实，`--yes` 一律返回 `approval_write_not_verified` policy 错误。dry-run 仍然可用。
+- profile-info / approval / attendance summary 路径的 target-scope 精细化（已知限制，1.0.x 补）。
+- 完整 SSC 与 HR_ADMIN 权限拆分（1.0 中 SSC = HR_ADMIN，未来按敏感字段细分）。
+
 ## 项目背景与愿景
 
 项目发起背景是公司正在系统性推进 AI 工具在业务中的落地。作为金融互联网公司的 HRIS，当前可以在工作中充分使用各类顶级 AI 模型，公司层面也在人力、工具和氛围上持续投入。HR 部门管理层同样支持 AI 推广：在公司 AI 大赛之后，人力部门内部也组织了多轮 AI 使用培训和部门 AI 大赛，目标是让 AI 真正进入工作流程，为日常 HR 业务提效。
@@ -67,36 +85,37 @@
 
 ## 安装与快速开始
 
-当前仓库已提供 V1a 可运行实现。
-
-V1a 运行依赖：
-
-- Go 1.26+
-- Cobra / pflag
-- go-sql-driver/mysql
-
-构建：
+### 一键安装（推荐）
 
 ```bash
-go mod tidy
-go build -o hr.exe .
+npm install -g @a614594721/hr-cli
+hr-cli doctor
+hr-cli auth +login --name 吴邦
+hr-cli employee +find --badge P000487
 ```
 
-运行：
+`postinstall` 会自动从 GitHub Releases 下载对应平台（darwin/linux/windows，amd64/arm64）的预编译二进制并校验 SHA256。装包后 `hr-cli` 即在 PATH 中。
+
+要走内网代理或离线安装：
 
 ```bash
-.\hr.exe doctor
-.\hr.exe auth +me
-.\hr.exe employee +find --badge A00123
+HR_CLI_BINARY_URL=file:///path/to/hr-cli-1.0.0-rc.1-linux-amd64.tar.gz npm install -g @a614594721/hr-cli
 ```
 
-目标安装形态：
+### 直接下载二进制
+
+到 [Releases](https://github.com/a614594721/hr-cli/releases) 下载对应平台压缩包，解压后把 `hr-cli` 放到 PATH 即可。
+
+### 源码构建
+
+依赖 Go 1.26+：
 
 ```bash
-# 源码构建，后续补充 Makefile
-git clone <repo-url>
+git clone https://github.com/a614594721/hr-cli.git
 cd hr-cli
-go build -o hr.exe .
+go mod tidy
+go build -ldflags "-X hr-cli/internal/build.Version=dev" -o hr-cli .
+./hr-cli doctor
 ```
 
 首次配置目标流程：

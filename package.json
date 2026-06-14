@@ -1,0 +1,35 @@
+{
+  "name": "@a614594721/hr-cli",
+  "version": "1.0.0-rc.1",
+  "description": "hr-cli — DB-backed HR capability gateway, modeled after Lark CLI",
+  "bin": {
+    "hr-cli": "scripts/run.js"
+  },
+  "scripts": {
+    "postinstall": "node scripts/install.js"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "engines": {
+    "node": ">=16"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/a614594721/hr-cli.git"
+  },
+  "license": "MIT",
+  "files": [
+    "scripts/install.js",
+    "scripts/run.js",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ]
+}

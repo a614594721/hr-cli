@@ -136,8 +136,8 @@ func WritePlan(action string, taskID int, comment, reason, toBadge string, dryRu
 		plan["status"] = "dry_run_only"
 		return plan, nil
 	}
-	err = errs.Policy("approval_write_not_verified", action+" is not implemented because the approval state machine has not been verified")
-	err.Hint = "dry-run is available, but --yes remains disabled until a native approve/reject/transfer chain is confirmed"
+	err = errs.Policy("approval_write_not_verified", action+" is not implemented in hr-cli 1.0; the approval state machine has not been verified")
+	err.Hint = "1.0 ships read-only approval queries plus dry-run only; --yes will be enabled once the native approve/reject/transfer chain is confirmed in a future release"
 	return nil, err
 }
 

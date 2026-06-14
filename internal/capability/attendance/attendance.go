@@ -15,7 +15,32 @@ const recordColumns = `
 	AMOUNT_1541, AMOUNT_1543, AMOUNT_1571`
 
 func Records(badge string, eid int, from, to string, limit int) ([]map[string]any, *errs.Error) {
-	if err := perm.Require("attendance.records.query", targetEID(eid)); err != nil {
+	resolvedEID := eid
+	if resolvedEID == 0 && badge != "" {
+		row, err := db.QueryOne("SELECT EID FROM eemployee WHERE badge=?", badge)
+		if err != nil {
+			return nil, err
+		}
+		if row != nil {
+			switch v := row["EID"].(type) {
+			case int:
+				resolvedEID = v
+			case int64:
+				resolvedEID = int(v)
+			case float64:
+				resolvedEID = int(v)
+			case []byte:
+				if n, parseErr := strconv.Atoi(strings.TrimSpace(string(v))); parseErr == nil {
+					resolvedEID = n
+				}
+			case string:
+				if n, parseErr := strconv.Atoi(strings.TrimSpace(v)); parseErr == nil {
+					resolvedEID = n
+				}
+			}
+		}
+	}
+	if err := perm.Require("attendance.records.query", targetEID(resolvedEID)); err != nil {
 		return nil, err
 	}
 	if badge == "" && eid == 0 {

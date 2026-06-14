@@ -14,6 +14,7 @@ type Decision struct {
 	Decision  string        `json:"decision"`
 	Reason    string        `json:"reason"`
 	Scope     string        `json:"scope"`
+	Target    *ScopeResult  `json:"target_scope,omitempty"`
 }
 
 var roleActions = map[string]map[string]bool{
@@ -60,8 +61,13 @@ var roleActions = map[string]map[string]bool{
 		"attendance.exception.query": true,
 	},
 	"HR_ADMIN": {"*": true},
+	"SSC":      {"*": true},
 }
 
+// Explain returns the action-level decision plus, when a target is supplied,
+// the target-scope decision derived from psoradiationrangeeidlist.
+// On a DB error during the scope lookup the action result is still returned;
+// scope is reported as "error" so callers can surface the issue.
 func Explain(action, targetEID string) Decision {
 	operator := auth.CurrentOperator()
 	role := strings.ToUpper(operator.Role)
@@ -72,7 +78,7 @@ func Explain(action, targetEID string) Decision {
 		decision = "allow"
 		reason = "action is allowed for role " + role
 	}
-	return Decision{
+	out := Decision{
 		Action:    action,
 		TargetEID: targetEID,
 		Operator:  operator,
@@ -80,17 +86,36 @@ func Explain(action, targetEID string) Decision {
 		Reason:    reason,
 		Scope:     scopeForRole(role),
 	}
+	if strings.TrimSpace(targetEID) != "" {
+		res, err := CheckTargetScope(operator, targetEID)
+		if err != nil {
+			res.Decision = "error"
+			res.Reason = "scope lookup failed: " + err.Message
+		}
+		out.Target = &res
+		if decision == "allow" && res.Decision == "deny" {
+			out.Decision = "deny"
+			out.Reason = res.Reason
+		}
+	}
+	return out
 }
 
+// Require denies when either the action-level check or the target-scope check
+// fails. An empty targetEID skips the scope check (e.g. list/search APIs).
 func Require(action, targetEID string) *errs.Error {
-	decision := Explain(action, targetEID)
-	if decision.Decision == "allow" {
+	operator := auth.CurrentOperator()
+	role := strings.ToUpper(operator.Role)
+	if !(roleActions[role][action] || roleActions[role]["*"]) {
+		err := errs.Authorization("action_denied", "action is not allowed for role "+role)
+		err.Param = action
+		err.Hint = "run perm explain --action " + action
+		return err
+	}
+	if strings.TrimSpace(targetEID) == "" {
 		return nil
 	}
-	err := errs.Authorization("action_denied", decision.Reason)
-	err.Param = action
-	err.Hint = "run perm explain --action " + action
-	return err
+	return RequireTargetScope(action, operator, targetEID)
 }
 
 func scopeForRole(role string) string {
@@ -101,6 +126,8 @@ func scopeForRole(role string) string {
 		return "hrbp_scope"
 	case "MANAGER":
 		return "direct_reports"
+	case "SSC":
+		return "all"
 	case "HR_ADMIN":
 		return "all"
 	default:

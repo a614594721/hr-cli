@@ -133,16 +133,31 @@ func statusData(operator Operator, session runtime.Session, hasSession bool, ver
 func CurrentOperator() Operator {
 	profile, hasProfile := runtime.ActiveProfile()
 	session, hasSession := runtime.LoadSession()
-	role := firstNonEmpty(os.Getenv("HR_OPERATOR_ROLE"), session.Role, profile.OperatorRole)
+	dbEnv := firstNonEmpty(os.Getenv("DB_ENV"), profile.DBEnv)
+	envOverridesAllowed := dbEnv == "test" || (!hasProfile && dbEnv == "")
+	envRole := ""
+	if envOverridesAllowed {
+		envRole = os.Getenv("HR_OPERATOR_ROLE")
+	}
+	role := firstNonEmpty(envRole, session.Role, profile.OperatorRole)
 	if role == "" {
-		dbEnv := firstNonEmpty(os.Getenv("DB_ENV"), profile.DBEnv)
-		if dbEnv == "test" || (!hasProfile && dbEnv == "") {
+		if envOverridesAllowed {
 			role = "HR_ADMIN"
 		} else {
 			role = "SELF"
 		}
 	}
-	name := firstNonEmpty(os.Getenv("HR_OPERATOR_NAME"), session.Name, profile.OperatorName)
+	envEID := ""
+	envURID := ""
+	envBadge := ""
+	envName := ""
+	if envOverridesAllowed {
+		envEID = os.Getenv("HR_OPERATOR_EID")
+		envURID = os.Getenv("HR_OPERATOR_URID")
+		envBadge = os.Getenv("HR_OPERATOR_BADGE")
+		envName = os.Getenv("HR_OPERATOR_NAME")
+	}
+	name := firstNonEmpty(envName, session.Name, profile.OperatorName)
 	if name == "" {
 		name = os.Getenv("USERNAME")
 	}
@@ -150,15 +165,19 @@ func CurrentOperator() Operator {
 		name = "local-operator"
 	}
 	source := "environment"
-	if noOperatorEnv() && hasSession {
-		source = session.Source
-	} else if os.Getenv("HR_OPERATOR_NAME") == "" && hasProfile && profile.OperatorName != "" {
+	if !envOverridesAllowed || noOperatorEnv() {
+		if hasSession {
+			source = session.Source
+		} else if hasProfile && profile.OperatorName != "" {
+			source = "profile"
+		}
+	} else if envName == "" && hasProfile && profile.OperatorName != "" {
 		source = "profile"
 	}
 	return Operator{
-		EID:    firstNonEmpty(os.Getenv("HR_OPERATOR_EID"), session.EID, profile.OperatorEID),
-		URID:   firstNonEmpty(os.Getenv("HR_OPERATOR_URID"), session.URID, profile.OperatorURID),
-		Badge:  firstNonEmpty(os.Getenv("HR_OPERATOR_BADGE"), session.Badge, profile.OperatorBadge),
+		EID:    firstNonEmpty(envEID, session.EID, profile.OperatorEID),
+		URID:   firstNonEmpty(envURID, session.URID, profile.OperatorURID),
+		Badge:  firstNonEmpty(envBadge, session.Badge, profile.OperatorBadge),
 		Name:   name,
 		Role:   role,
 		Source: source,
@@ -174,15 +193,27 @@ func Login(req LoginRequest) (map[string]any, *errs.Error) {
 		return nil, err
 	}
 	role := strings.ToUpper(strings.TrimSpace(req.Role))
+	eid := fmt.Sprint(row["EID"])
+	dbRole, dbRoles, roleErr := ResolveDBRoleByEID(eid)
+	if roleErr != nil {
+		return nil, roleErr
+	}
+	roleSource := "db_skysecrolemember"
 	if role == "" {
-		role = defaultRole()
+		if dbRole != "" {
+			role = dbRole
+		} else {
+			role = defaultRole()
+			roleSource = "default_fallback"
+		}
+	} else {
+		roleSource = "explicit_flag"
 	}
 	if !validRole(role) {
-		e := errs.Validation("invalid_role", "--role must be SELF, HRBP, MANAGER, or HR_ADMIN")
+		e := errs.Validation("invalid_role", "--role must be SELF, HRBP, MANAGER, SSC, or HR_ADMIN")
 		e.Param = "--role"
 		return nil, e
 	}
-	eid := fmt.Sprint(row["EID"])
 	session := runtime.Session{
 		EID:    eid,
 		URID:   eid,
@@ -201,6 +232,12 @@ func Login(req LoginRequest) (map[string]any, *errs.Error) {
 		"identity": map[string]any{
 			"email":       row["EMAIL"],
 			"ding_userid": row["ding_userid"],
+		},
+		"role_resolution": map[string]any{
+			"role":         role,
+			"source":       roleSource,
+			"db_roles":     dbRoles,
+			"db_role_top":  dbRole,
 		},
 	}, nil
 }
@@ -301,7 +338,7 @@ func defaultRole() string {
 
 func validRole(role string) bool {
 	switch role {
-	case "SELF", "HRBP", "MANAGER", "HR_ADMIN":
+	case "SELF", "HRBP", "MANAGER", "SSC", "HR_ADMIN":
 		return true
 	default:
 		return false

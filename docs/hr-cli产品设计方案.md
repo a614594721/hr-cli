@@ -317,6 +317,22 @@ attendance.summary.query
 
 审批权限不能只按 HRBP/ADMIN 推断，还必须结合审批任务当前处理人、节点权限和流程定义。
 
+### 4.1 target-scope 落地（已实现）
+
+target-scope 在 `internal/perm/scope.go` 实现，统一查询系统已有缓存表：
+
+```sql
+SELECT 1 FROM psoradiationrangeeidlist WHERE ueid=? AND eid=? LIMIT 1
+```
+
+- `HR_ADMIN` 旁路 scope 检查，与 `PsoRadiationRange_new` 函数的超管白名单 `(6,0,81,92,94,427,882,426)` 语义一致。
+- 其它角色查不到记录即返回 `target_out_of_scope` policy 错误。
+- 该缓存表由 `pro_cr_PsoRadiationRangeEidlist` 批量重建（`TRUNCATE + INSERT`），CLI 不主动刷新。调动后 scope 生效需等下一轮批跑。
+- `perm.Require(action, targetEID)` 同时执行动作 + scope 双闸；未传 targetEID 时仅动作级（适用于 list/search）。
+- `perm explain --action ... --target-eid ...` 在 `target_scope` 字段输出数据源和判定原因。
+
+已接入 capability：`employee.get`、`attendance.records.query`（仅 `--eid` 路径，`--badge` 路径未解析为 EID 暂不强制）。其它 capability（transfer/profile-info/approval/attendance summary/exceptions）保留动作级，待逐步迁移。
+
 ## 5. 没有原生 API 时的探查清单
 
 在实现前，需要对 MySQL 做能力盘点。按业务域输出 `docs/db-capability-inventory.md`：

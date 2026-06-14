@@ -29,9 +29,12 @@ func Preview(badge string, dept, job int, effectDate, reason string) (preview.Pa
 	if err := perm.Require("transfer.preview", ""); err != nil {
 		return preview.Payload{}, err
 	}
-	target, err := employee.ByBadge(badge)
+	target, err := employee.ByBadgeUnscoped(badge)
 	if err != nil {
 		return preview.Payload{}, err
+	}
+	if scopeErr := perm.RequireTargetScope("transfer.preview", auth.CurrentOperator(), fmt.Sprint(target["EID"])); scopeErr != nil {
+		return preview.Payload{}, scopeErr
 	}
 	var changes []map[string]any
 	if dept != 0 {
@@ -81,6 +84,13 @@ func Apply(previewID string, yes, dryRun bool) (map[string]any, *errs.Error) {
 	if loadErr != nil {
 		return nil, loadErr
 	}
+	if plan, ok := payload.Plan.(map[string]any); ok {
+		if target, ok := plan["target"].(map[string]any); ok {
+			if scopeErr := perm.RequireTargetScope("transfer.apply", auth.CurrentOperator(), fmt.Sprint(target["EID"])); scopeErr != nil {
+				return nil, scopeErr
+			}
+		}
+	}
 	result, preflightErr := preflight(payload)
 	if preflightErr != nil {
 		return nil, preflightErr
@@ -115,7 +125,7 @@ func preflight(payload preview.Payload) (map[string]any, *errs.Error) {
 	if badge == "" {
 		return nil, errs.Validation("invalid_preview", "preview target badge is missing")
 	}
-	current, currentErr := employee.ByBadge(badge)
+	current, currentErr := employee.ByBadgeUnscoped(badge)
 	if currentErr != nil {
 		return nil, currentErr
 	}

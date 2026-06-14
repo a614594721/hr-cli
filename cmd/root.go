@@ -8,12 +8,11 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"hr-cli/internal/build"
 	"hr-cli/internal/db"
 	"hr-cli/internal/errs"
 	"hr-cli/internal/output"
 )
-
-const version = "0.1.0-v1a"
 
 var format string
 var currentCommand string
@@ -37,7 +36,7 @@ func NewRoot() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "hr",
 		Short:            "DB-backed HR capability gateway",
-		Version:          version,
+		Version:          build.Version,
 		SilenceUsage:     true,
 		SilenceErrors:    true,
 		TraverseChildren: true,
@@ -80,7 +79,7 @@ func meta(cmd *cobra.Command) output.Meta {
 	}
 	meta := output.Meta{
 		"command": command,
-		"version": version,
+		"version": build.Version,
 		"format":  format,
 	}
 	for k, v := range db.Meta() {

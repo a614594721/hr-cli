@@ -5,3 +5,9 @@ __pycache__/
 .venv/
 venv/
 hr.exe
+hr-cli.exe
+dist/
+node_modules/
+bin/
+*.tar.gz
+*.zip

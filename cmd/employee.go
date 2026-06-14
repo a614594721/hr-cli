@@ -13,11 +13,15 @@ func newEmployeeCommand() *cobra.Command {
 	find := &cobra.Command{
 		Use: "+find",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			items, truncated, err := employee.Find(name, badge, phone, limit)
+			items, truncated, scope, err := employee.Find(name, badge, phone, limit)
 			if err != nil {
 				return err
 			}
-			return emit(cmd, map[string]any{"items": items, "truncated": truncated})
+			payload := map[string]any{"items": items, "truncated": truncated}
+			if scope != nil {
+				payload["scope"] = scope
+			}
+			return emit(cmd, payload)
 		},
 	}
 	find.Flags().StringVar(&name, "name", "", "employee name")

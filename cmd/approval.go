@@ -62,7 +62,15 @@ func approvalWriteCommand(name string) *cobra.Command {
 	var comment, reason, toBadge string
 	var dryRun, yes bool
 	cmd := &cobra.Command{
-		Use: name,
+		Use:   name,
+		Short: "approval write (1.0: dry-run only; --yes is disabled)",
+		Long: name + ` plans an approval write but does NOT execute it.
+
+hr-cli 1.0 ships approval queries (+tasks/+task/+instances) and dry-run for
+approve/reject/transfer. The --yes path is intentionally disabled because the
+native state-machine entrypoint (approve, reject, transfer node permissions,
+logs, callbacks) has not been verified end to end. A future release will
+enable --yes once the native chain is confirmed.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			data, err := approval.WritePlan(name, taskID, comment, reason, toBadge, dryRun, yes)
 			if err != nil {
@@ -76,7 +84,7 @@ func approvalWriteCommand(name string) *cobra.Command {
 	cmd.Flags().StringVar(&reason, "reason", "", "reason")
 	cmd.Flags().StringVar(&toBadge, "to-badge", "", "target badge")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "inspect approval write plan without writing")
-	cmd.Flags().BoolVar(&yes, "yes", false, "confirm approval write")
+	cmd.Flags().BoolVar(&yes, "yes", false, "(disabled in 1.0) confirm approval write")
 	_ = cmd.MarkFlagRequired("task-id")
 	return cmd
 }
