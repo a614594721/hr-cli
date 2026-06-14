@@ -1,0 +1,33 @@
+internal/runtime/session.go
+  s_6278b699cd9e9b::t_5a66b1dd25e461 1-68
+cmd/auth.go
+  s_6278b699cd9e9b::t_644d5b6e9c18b3 19-20,23-27,29-37,41-45
+internal/auth/auth.go
+  s_6278b699cd9e9b::t_5b947d5ed172dc 4,6,8-9,22-31,34-35,44,52-54,58-60,67-201
+docs/command-contract.md
+  s_6278b699cd9e9b::t_5ad50d01fd1ed1 19-21
+skills/hr-shared/SKILL.md
+  s_6278b699cd9e9b::t_1068a6fa457926 8,10,15
+docs/remaining-known-limitations.md
+  s_6278b699cd9e9b::t_2379402cea17e2 78-84,89-90
+docs/full-test-audit-2026-06-14.md
+  s_6278b699cd9e9b::t_9917373c7aa417 28,59
+README.md
+  s_6278b699cd9e9b::t_ebf8bea0b092be 108,126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "09fc06bb9abb2a0d0cd91fd61cee9caf351913bc",
+  "prompts": {},
+  "sessions": {
+    "s_6278b699cd9e9b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ec18c-75dd-7c80-bc63-8e420037c742",
+        "model": "gpt-5.5"
+      },
+      "human_author": "wubang <614594721@qq.com>"
+    }
+  }
+}
