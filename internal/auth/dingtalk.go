@@ -49,22 +49,45 @@ func LoginDingTalk(req LoginRequest) (map[string]any, *errs.Error) {
 	if timeout <= 0 {
 		timeout = 180 * time.Second
 	}
-	started, err := startRemoteLogin(baseURL)
-	if err != nil {
-		return nil, err
-	}
-	if !req.NoBrowser {
-		if openErr := openBrowser(started.AuthURL); openErr != nil {
-			// Keep going: the returned auth_url is enough for manual login.
-			fmt.Fprintf(os.Stderr, "failed to open browser automatically: %v\n", openErr)
+	var started loginStartResponse
+	if req.LoginID != "" || req.LoginSecret != "" {
+		if req.LoginID == "" || req.LoginSecret == "" {
+			return nil, errs.Validation("missing_login_resume_fields", "--login-id and --login-secret must be provided together")
 		}
+		started = loginStartResponse{LoginID: req.LoginID, LoginSecret: req.LoginSecret}
+	} else {
+		started, err = startRemoteLogin(baseURL)
+		if err != nil {
+			return nil, err
+		}
+		if req.NoWait {
+			return map[string]any{
+				"status":                "pending",
+				"mode":                  "dingtalk_oauth",
+				"login_id":              started.LoginID,
+				"login_secret":          started.LoginSecret,
+				"auth_url":              started.AuthURL,
+				"expires_at":            started.ExpiresAt,
+				"poll_interval_seconds": started.PollIntervalSeconds,
+				"next":                  "open auth_url, then run auth +login --dingtalk --login-id <login_id> --login-secret <login_secret>",
+			}, nil
+		}
+		if !req.NoBrowser {
+			if openErr := openBrowser(started.AuthURL); openErr != nil {
+				// Keep going: the returned auth_url is enough for manual login.
+				fmt.Fprintf(os.Stderr, "failed to open browser automatically: %v\n", openErr)
+			}
+		}
+		fmt.Fprintf(os.Stderr, "DingTalk login URL: %s\n", started.AuthURL)
 	}
-	fmt.Fprintf(os.Stderr, "DingTalk login URL: %s\n", started.AuthURL)
 	token, err := pollRemoteLogin(baseURL, started, timeout)
 	if err != nil {
 		return nil, err
 	}
 	session := sessionFromToken(baseURL, token)
+	if saveErr := storeToken(session, token); saveErr != nil {
+		return nil, saveErr
+	}
 	if saveErr := appruntime.SaveSession(session); saveErr != nil {
 		return nil, saveErr
 	}
@@ -134,15 +157,53 @@ func pollRemoteLogin(baseURL string, started loginStartResponse, timeout time.Du
 }
 
 func refreshSessionIfNeeded(session appruntime.Session, force bool) (appruntime.Session, *errs.Error) {
-	if session.Source != "dingtalk_oauth" || session.AuthBaseURL == "" || session.RefreshToken == "" {
+	if session.Source != "dingtalk_oauth" || session.AuthBaseURL == "" || session.EID == "" {
 		return session, nil
 	}
-	if !force && !accessTokenNeedsRefresh(session.AccessTokenExpiresAt) {
-		return session, nil
-	}
-	refreshed, err := refreshRemoteSession(session)
+	stored, err := loadStoredToken(session)
 	if err != nil {
 		return session, err
+	}
+	status := tokenStatus(stored)
+	if status == "missing" {
+		return session, errs.Authentication("missing_token", "DingTalk token is missing; run auth +login --dingtalk")
+	}
+	if status == "expired" {
+		_ = removeStoredToken(session)
+		return session, errs.Authentication("refresh_token_expired", "DingTalk refresh token expired; run auth +login --dingtalk")
+	}
+	if !force && status == "valid" {
+		return session, nil
+	}
+
+	lock, err := acquireTokenLock(session, 30*time.Second)
+	if err != nil {
+		return session, err
+	}
+	defer lock.release()
+
+	stored, err = loadStoredToken(session)
+	if err != nil {
+		return session, err
+	}
+	status = tokenStatus(stored)
+	if !force && status == "valid" {
+		return sessionFromStoredToken(session, stored), nil
+	}
+	if status == "expired" || status == "missing" {
+		_ = removeStoredToken(session)
+		return session, errs.Authentication("refresh_token_expired", "DingTalk refresh token expired; run auth +login --dingtalk")
+	}
+
+	refreshed, token, err := refreshRemoteSession(session, stored)
+	if err != nil {
+		if shouldClearTokenAfterRefreshError(err) {
+			_ = removeStoredToken(session)
+		}
+		return session, err
+	}
+	if saveErr := storeToken(refreshed, token); saveErr != nil {
+		return session, saveErr
 	}
 	if saveErr := appruntime.SaveSession(refreshed); saveErr != nil {
 		return session, saveErr
@@ -150,30 +211,23 @@ func refreshSessionIfNeeded(session appruntime.Session, force bool) (appruntime.
 	return refreshed, nil
 }
 
-func accessTokenNeedsRefresh(expiresAt string) bool {
-	if expiresAt == "" {
-		return true
-	}
-	parsed, err := time.Parse(time.RFC3339, expiresAt)
-	if err != nil {
-		return true
-	}
-	return time.Until(parsed) < 60*time.Second
-}
-
-func refreshRemoteSession(session appruntime.Session) (appruntime.Session, *errs.Error) {
-	body := map[string]string{"refreshToken": session.RefreshToken}
+func refreshRemoteSession(session appruntime.Session, stored *StoredToken) (appruntime.Session, tokenResponse, *errs.Error) {
+	body := map[string]string{"refreshToken": stored.RefreshToken}
 	var token tokenResponse
 	err := remoteJSON(http.MethodPost, session.AuthBaseURL+"/api/hr-cli/auth/refresh", "", body, &token)
 	if err != nil {
-		return session, err
+		return session, token, err
 	}
-	return sessionFromToken(session.AuthBaseURL, token), nil
+	return sessionFromToken(session.AuthBaseURL, token), token, nil
 }
 
-func remoteMe(session appruntime.Session) (Operator, string, *errs.Error) {
+func shouldClearTokenAfterRefreshError(err *errs.Error) bool {
+	return err != nil && err.Type == "authentication"
+}
+
+func remoteMe(session appruntime.Session, stored *StoredToken) (Operator, string, *errs.Error) {
 	var result remoteMeResponse
-	err := remoteJSON(http.MethodGet, session.AuthBaseURL+"/api/hr-cli/auth/me", session.AccessToken, nil, &result)
+	err := remoteJSON(http.MethodGet, session.AuthBaseURL+"/api/hr-cli/auth/me", stored.AccessToken, nil, &result)
 	if err != nil {
 		return Operator{}, "", err
 	}
@@ -181,7 +235,11 @@ func remoteMe(session appruntime.Session) (Operator, string, *errs.Error) {
 }
 
 func revokeRemoteSession(session appruntime.Session) bool {
-	body := map[string]string{"refreshToken": session.RefreshToken}
+	stored, err := loadStoredToken(session)
+	if err != nil || stored == nil || stored.RefreshToken == "" {
+		return false
+	}
+	body := map[string]string{"refreshToken": stored.RefreshToken}
 	var result map[string]any
 	return remoteJSON(http.MethodPost, session.AuthBaseURL+"/api/hr-cli/auth/logout", "", body, &result) == nil
 }
@@ -195,11 +253,18 @@ func sessionFromToken(baseURL string, token tokenResponse) appruntime.Session {
 		Role:                  token.Operator.Role,
 		Source:                "dingtalk_oauth",
 		AuthBaseURL:           baseURL,
-		AccessToken:           token.AccessToken,
 		AccessTokenExpiresAt:  token.ExpiresAt,
-		RefreshToken:          token.RefreshToken,
 		RefreshTokenExpiresAt: token.RefreshExpiresAt,
 	}
+}
+
+func sessionFromStoredToken(session appruntime.Session, token *StoredToken) appruntime.Session {
+	if token == nil {
+		return session
+	}
+	session.AccessTokenExpiresAt = token.AccessTokenExpiresAt
+	session.RefreshTokenExpiresAt = token.RefreshTokenExpiresAt
+	return session
 }
 
 func remoteJSON(method, endpoint, bearer string, body any, out any) *errs.Error {

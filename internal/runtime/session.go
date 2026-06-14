@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"os"
@@ -18,9 +19,7 @@ type Session struct {
 	Role                  string `json:"role"`
 	Source                string `json:"source"`
 	AuthBaseURL           string `json:"auth_base_url,omitempty"`
-	AccessToken           string `json:"access_token,omitempty"`
 	AccessTokenExpiresAt  string `json:"access_token_expires_at,omitempty"`
-	RefreshToken          string `json:"refresh_token,omitempty"`
 	RefreshTokenExpiresAt string `json:"refresh_token_expires_at,omitempty"`
 	CreatedAt             string `json:"created_at"`
 }
@@ -54,6 +53,9 @@ func LoadSession() (Session, bool) {
 	}
 	if session.Name == "" {
 		return Session{}, false
+	}
+	if bytes.Contains(data, []byte(`"access_token"`)) || bytes.Contains(data, []byte(`"refresh_token"`)) {
+		_ = SaveSession(session)
 	}
 	return session, true
 }

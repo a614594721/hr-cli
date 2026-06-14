@@ -18,16 +18,19 @@ func newAuthCommand() *cobra.Command {
 			return emit(cmd, data)
 		},
 	})
-	root.AddCommand(&cobra.Command{
+	var statusVerify bool
+	statusCmd := &cobra.Command{
 		Use: "status",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			data, err := auth.Status()
+			data, err := auth.Status(statusVerify)
 			if err != nil {
 				return err
 			}
 			return emit(cmd, data)
 		},
-	})
+	}
+	statusCmd.Flags().BoolVar(&statusVerify, "verify", false, "verify token against the auth broker")
+	root.AddCommand(statusCmd)
 	var login auth.LoginRequest
 	loginCmd := &cobra.Command{
 		Use: "+login",
@@ -49,6 +52,9 @@ func newAuthCommand() *cobra.Command {
 	loginCmd.Flags().BoolVar(&login.DingTalk, "dingtalk", false, "login through DingTalk OAuth broker")
 	loginCmd.Flags().StringVar(&login.AuthBaseURL, "auth-base-url", "", "hr-cli auth broker base URL")
 	loginCmd.Flags().BoolVar(&login.NoBrowser, "no-browser", false, "print the login URL without opening a browser")
+	loginCmd.Flags().BoolVar(&login.NoWait, "no-wait", false, "start DingTalk login and return without polling")
+	loginCmd.Flags().StringVar(&login.LoginID, "login-id", "", "resume polling a previous DingTalk login id")
+	loginCmd.Flags().StringVar(&login.LoginSecret, "login-secret", "", "resume polling a previous DingTalk login secret")
 	loginCmd.Flags().IntVar(&login.TimeoutSeconds, "timeout", 180, "DingTalk login timeout in seconds")
 	root.AddCommand(loginCmd)
 	root.AddCommand(&cobra.Command{

@@ -30,6 +30,9 @@ type LoginRequest struct {
 	DingTalk       bool
 	AuthBaseURL    string
 	NoBrowser      bool
+	NoWait         bool
+	LoginID        string
+	LoginSecret    string
 	TimeoutSeconds int
 }
 
@@ -40,14 +43,28 @@ func Me() (Operator, *errs.Error) {
 		if err != nil {
 			return Operator{}, err
 		}
-		operator, expiresAt, err := remoteMe(refreshed)
+		stored, err := loadStoredToken(refreshed)
+		if err != nil {
+			return Operator{}, err
+		}
+		if stored == nil {
+			return Operator{}, errs.Authentication("missing_token", "DingTalk token is missing; run auth +login --dingtalk")
+		}
+		operator, expiresAt, err := remoteMe(refreshed, stored)
 		_ = expiresAt
 		if err != nil {
 			refreshed, err = refreshSessionIfNeeded(refreshed, true)
 			if err != nil {
 				return Operator{}, err
 			}
-			operator, expiresAt, err = remoteMe(refreshed)
+			stored, err = loadStoredToken(refreshed)
+			if err != nil {
+				return Operator{}, err
+			}
+			if stored == nil {
+				return Operator{}, errs.Authentication("missing_token", "DingTalk token is missing; run auth +login --dingtalk")
+			}
+			operator, expiresAt, err = remoteMe(refreshed, stored)
 			_ = expiresAt
 			if err != nil {
 				return Operator{}, err
@@ -67,18 +84,47 @@ func Me() (Operator, *errs.Error) {
 	return CurrentOperator(), nil
 }
 
-func Status() (map[string]any, *errs.Error) {
-	operator, err := Me()
-	if err != nil {
-		return nil, err
-	}
+func Status(verify bool) (map[string]any, *errs.Error) {
 	session, hasSession := runtime.LoadSession()
+	if verify {
+		operator, err := Me()
+		if err != nil {
+			return nil, err
+		}
+		session, hasSession = runtime.LoadSession()
+		return statusData(operator, session, hasSession, true)
+	}
+	operator := CurrentOperator()
+	return statusData(operator, session, hasSession, false)
+}
+
+func statusData(operator Operator, session runtime.Session, hasSession bool, verified bool) (map[string]any, *errs.Error) {
 	mode := operator.Source
 	status := "active"
-	data := map[string]any{"status": status, "mode": mode, "operator": operator}
+	data := map[string]any{"status": status, "mode": mode, "operator": operator, "verified": verified}
 	if hasSession && session.Source == "dingtalk_oauth" {
-		data["access_expires_at"] = session.AccessTokenExpiresAt
-		data["refresh_expires_at"] = session.RefreshTokenExpiresAt
+		stored, err := loadStoredToken(session)
+		if err != nil {
+			return nil, err
+		}
+		tokenState := tokenStatus(stored)
+		if tokenState == "expired" {
+			status = "expired"
+			data["status"] = status
+		}
+		if tokenState == "missing" {
+			status = "missing_token"
+			data["status"] = status
+		}
+		if stored != nil {
+			data["access_expires_at"] = stored.AccessTokenExpiresAt
+			data["refresh_expires_at"] = stored.RefreshTokenExpiresAt
+			data["granted_at"] = stored.GrantedAt
+		} else {
+			data["access_expires_at"] = session.AccessTokenExpiresAt
+			data["refresh_expires_at"] = session.RefreshTokenExpiresAt
+		}
+		data["token_status"] = tokenState
 		data["auth_base_url"] = session.AuthBaseURL
 	}
 	return data, nil
@@ -162,8 +208,11 @@ func Login(req LoginRequest) (map[string]any, *errs.Error) {
 func Logout() (map[string]any, *errs.Error) {
 	session, hasSession := runtime.LoadSession()
 	remoteRevoked := false
-	if hasSession && session.Source == "dingtalk_oauth" && session.AuthBaseURL != "" && session.RefreshToken != "" {
+	if hasSession && session.Source == "dingtalk_oauth" && session.AuthBaseURL != "" {
 		remoteRevoked = revokeRemoteSession(session)
+		if err := removeStoredToken(session); err != nil {
+			return nil, err
+		}
 	}
 	removed, err := runtime.ClearSession()
 	if err != nil {
