@@ -51,6 +51,7 @@ func newProfileCommand() *cobra.Command {
 	add.Flags().StringVar(&profile.DBName, "db-name", "", "database name")
 	add.Flags().StringVar(&profile.DBUser, "db-user", "", "database user")
 	add.Flags().StringVar(&profile.CredentialTarget, "credential-target", "", "external credential target name")
+	add.Flags().StringVar(&profile.AuthBaseURL, "auth-base-url", "", "hr-cli auth broker base URL")
 	add.Flags().StringVar(&profile.OperatorEID, "operator-eid", "", "operator EID")
 	add.Flags().StringVar(&profile.OperatorURID, "operator-urid", "", "operator URID")
 	add.Flags().StringVar(&profile.OperatorBadge, "operator-badge", "", "operator badge")

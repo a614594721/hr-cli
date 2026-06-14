@@ -11,13 +11,18 @@ import (
 )
 
 type Session struct {
-	EID       string `json:"eid,omitempty"`
-	URID      string `json:"urid,omitempty"`
-	Badge     string `json:"badge,omitempty"`
-	Name      string `json:"name"`
-	Role      string `json:"role"`
-	Source    string `json:"source"`
-	CreatedAt string `json:"created_at"`
+	EID                   string `json:"eid,omitempty"`
+	URID                  string `json:"urid,omitempty"`
+	Badge                 string `json:"badge,omitempty"`
+	Name                  string `json:"name"`
+	Role                  string `json:"role"`
+	Source                string `json:"source"`
+	AuthBaseURL           string `json:"auth_base_url,omitempty"`
+	AccessToken           string `json:"access_token,omitempty"`
+	AccessTokenExpiresAt  string `json:"access_token_expires_at,omitempty"`
+	RefreshToken          string `json:"refresh_token,omitempty"`
+	RefreshTokenExpiresAt string `json:"refresh_token_expires_at,omitempty"`
+	CreatedAt             string `json:"created_at"`
 }
 
 func SaveSession(session Session) *errs.Error {

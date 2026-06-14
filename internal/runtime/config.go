@@ -21,6 +21,7 @@ type Profile struct {
 	DBName           string `json:"db_name,omitempty"`
 	DBUser           string `json:"db_user,omitempty"`
 	CredentialTarget string `json:"credential_target,omitempty"`
+	AuthBaseURL      string `json:"auth_base_url,omitempty"`
 	OperatorEID      string `json:"operator_eid,omitempty"`
 	OperatorURID     string `json:"operator_urid,omitempty"`
 	OperatorBadge    string `json:"operator_badge,omitempty"`
@@ -123,6 +124,7 @@ func ListProfiles() (map[string]any, *errs.Error) {
 			"db_name":           profile.DBName,
 			"db_user":           profile.DBUser,
 			"credential_target": profile.CredentialTarget,
+			"auth_base_url":     profile.AuthBaseURL,
 			"operator_role":     profile.OperatorRole,
 		})
 	}

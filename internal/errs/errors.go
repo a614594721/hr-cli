@@ -44,3 +44,7 @@ func Confirmation(subtype, message string) *Error {
 func DB(subtype, message string) *Error {
 	return New("db", subtype, message, 4)
 }
+
+func Network(subtype, message string) *Error {
+	return New("network", subtype, message, 4)
+}

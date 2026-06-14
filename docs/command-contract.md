@@ -19,6 +19,7 @@ Auth:
 hr auth +login --badge P000487
 hr auth +login --name 吴邦 --role HR_ADMIN
 hr auth +login --ding-userid 1835191914705266
+hr auth +login --dingtalk --auth-base-url https://your-domain.example.com
 hr auth +me
 hr auth status
 hr auth +logout

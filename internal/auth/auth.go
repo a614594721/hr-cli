@@ -20,13 +20,68 @@ type Operator struct {
 }
 
 type LoginRequest struct {
-	EID        int
-	Badge      string
-	Email      string
-	Phone      string
-	Name       string
-	DingUserID string
-	Role       string
+	EID            int
+	Badge          string
+	Email          string
+	Phone          string
+	Name           string
+	DingUserID     string
+	Role           string
+	DingTalk       bool
+	AuthBaseURL    string
+	NoBrowser      bool
+	TimeoutSeconds int
+}
+
+func Me() (Operator, *errs.Error) {
+	session, hasSession := runtime.LoadSession()
+	if hasSession && session.Source == "dingtalk_oauth" {
+		refreshed, err := refreshSessionIfNeeded(session, false)
+		if err != nil {
+			return Operator{}, err
+		}
+		operator, expiresAt, err := remoteMe(refreshed)
+		_ = expiresAt
+		if err != nil {
+			refreshed, err = refreshSessionIfNeeded(refreshed, true)
+			if err != nil {
+				return Operator{}, err
+			}
+			operator, expiresAt, err = remoteMe(refreshed)
+			_ = expiresAt
+			if err != nil {
+				return Operator{}, err
+			}
+		}
+		refreshed.EID = operator.EID
+		refreshed.URID = operator.URID
+		refreshed.Badge = operator.Badge
+		refreshed.Name = operator.Name
+		refreshed.Role = operator.Role
+		refreshed.Source = operator.Source
+		if saveErr := runtime.SaveSession(refreshed); saveErr != nil {
+			return Operator{}, saveErr
+		}
+		return operator, nil
+	}
+	return CurrentOperator(), nil
+}
+
+func Status() (map[string]any, *errs.Error) {
+	operator, err := Me()
+	if err != nil {
+		return nil, err
+	}
+	session, hasSession := runtime.LoadSession()
+	mode := operator.Source
+	status := "active"
+	data := map[string]any{"status": status, "mode": mode, "operator": operator}
+	if hasSession && session.Source == "dingtalk_oauth" {
+		data["access_expires_at"] = session.AccessTokenExpiresAt
+		data["refresh_expires_at"] = session.RefreshTokenExpiresAt
+		data["auth_base_url"] = session.AuthBaseURL
+	}
+	return data, nil
 }
 
 func CurrentOperator() Operator {
@@ -65,6 +120,9 @@ func CurrentOperator() Operator {
 }
 
 func Login(req LoginRequest) (map[string]any, *errs.Error) {
+	if req.DingTalk {
+		return LoginDingTalk(req)
+	}
 	row, err := resolveEmployee(req)
 	if err != nil {
 		return nil, err
@@ -102,6 +160,11 @@ func Login(req LoginRequest) (map[string]any, *errs.Error) {
 }
 
 func Logout() (map[string]any, *errs.Error) {
+	session, hasSession := runtime.LoadSession()
+	remoteRevoked := false
+	if hasSession && session.Source == "dingtalk_oauth" && session.AuthBaseURL != "" && session.RefreshToken != "" {
+		remoteRevoked = revokeRemoteSession(session)
+	}
 	removed, err := runtime.ClearSession()
 	if err != nil {
 		return nil, err
@@ -110,7 +173,11 @@ func Logout() (map[string]any, *errs.Error) {
 	if removed {
 		status = "cleared"
 	}
-	return map[string]any{"status": status, "mode": "db_session"}, nil
+	mode := "db_session"
+	if hasSession && session.Source == "dingtalk_oauth" {
+		mode = "dingtalk_oauth"
+	}
+	return map[string]any{"status": status, "mode": mode, "remote_revoked": remoteRevoked}, nil
 }
 
 func resolveEmployee(req LoginRequest) (map[string]any, *errs.Error) {
