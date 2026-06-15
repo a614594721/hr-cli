@@ -226,10 +226,22 @@ func shouldClearTokenAfterRefreshError(err *errs.Error) bool {
 }
 
 func remoteMe(session appruntime.Session, stored *StoredToken) (Operator, string, *errs.Error) {
-	var result remoteMeResponse
-	err := remoteJSON(http.MethodGet, session.AuthBaseURL+"/api/hr-cli/auth/me", stored.AccessToken, nil, &result)
-	if err != nil {
+	// /v1/auth/me is a business endpoint and returns the gateway envelope
+	// {ok,data,meta}, unlike the /auth/login/* broker paths which are flat.
+	// remoteJSON is envelope-unaware, so unwrap manually.
+	var envelope struct {
+		OK   bool            `json:"ok"`
+		Data json.RawMessage `json:"data"`
+	}
+	if err := remoteJSON(http.MethodGet, session.AuthBaseURL+"/api/hr-cli/v1/auth/me", stored.AccessToken, nil, &envelope); err != nil {
 		return Operator{}, "", err
+	}
+	if !envelope.OK || len(envelope.Data) == 0 {
+		return Operator{}, "", errs.Network("invalid_me_response", "gateway /auth/me returned no data")
+	}
+	var result remoteMeResponse
+	if err := json.Unmarshal(envelope.Data, &result); err != nil {
+		return Operator{}, "", errs.Network("invalid_me_response", err.Error())
 	}
 	return result.Operator, result.ExpiresAt, nil
 }
