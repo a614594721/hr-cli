@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"hr-cli/internal/capability/employee"
+	"hr-cli/internal/gateway"
 )
 
 func newEmployeeCommand() *cobra.Command {
@@ -13,15 +13,12 @@ func newEmployeeCommand() *cobra.Command {
 	find := &cobra.Command{
 		Use: "+find",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			items, truncated, scope, err := employee.Find(name, badge, phone, limit)
+			out, err := gateway.Call(cmd.Context(), "POST", "/api/hr-cli/v1/employee/find",
+				map[string]any{"name": name, "badge": badge, "phone": phone, "limit": limit}, false)
 			if err != nil {
 				return err
 			}
-			payload := map[string]any{"items": items, "truncated": truncated}
-			if scope != nil {
-				payload["scope"] = scope
-			}
-			return emit(cmd, payload)
+			return emit(cmd, out)
 		},
 	}
 	find.Flags().StringVar(&name, "name", "", "employee name")
@@ -33,11 +30,12 @@ func newEmployeeCommand() *cobra.Command {
 	get := &cobra.Command{
 		Use: "get",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			data, err := employee.Get(eid)
+			out, err := gateway.Call(cmd.Context(), "POST", "/api/hr-cli/v1/employee/get",
+				map[string]any{"eid": eid}, false)
 			if err != nil {
 				return err
 			}
-			return emit(cmd, data)
+			return emit(cmd, out)
 		},
 	}
 	get.Flags().IntVar(&eid, "eid", 0, "employee EID")

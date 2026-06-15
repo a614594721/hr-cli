@@ -14,19 +14,12 @@ type Config struct {
 	Profiles       map[string]Profile `json:"profiles,omitempty"`
 }
 
+// Profile is the gateway-only client profile. After the gateway cutover the
+// client never reads a database directly: there is no DB host/user/credential
+// to track here, and the operator identity is derived from the JWT issued by
+// hr-gateway, not from local fields.
 type Profile struct {
-	DBEnv            string `json:"db_env,omitempty"`
-	DBHost           string `json:"db_host,omitempty"`
-	DBPort           string `json:"db_port,omitempty"`
-	DBName           string `json:"db_name,omitempty"`
-	DBUser           string `json:"db_user,omitempty"`
-	CredentialTarget string `json:"credential_target,omitempty"`
-	AuthBaseURL      string `json:"auth_base_url,omitempty"`
-	OperatorEID      string `json:"operator_eid,omitempty"`
-	OperatorURID     string `json:"operator_urid,omitempty"`
-	OperatorBadge    string `json:"operator_badge,omitempty"`
-	OperatorName     string `json:"operator_name,omitempty"`
-	OperatorRole     string `json:"operator_role,omitempty"`
+	AuthBaseURL string `json:"auth_base_url,omitempty"`
 }
 
 func Init() (map[string]any, *errs.Error) {
@@ -117,15 +110,9 @@ func ListProfiles() (map[string]any, *errs.Error) {
 	items := []map[string]any{}
 	for name, profile := range cfg.Profiles {
 		items = append(items, map[string]any{
-			"name":              name,
-			"active":            name == cfg.CurrentProfile,
-			"db_env":            profile.DBEnv,
-			"db_host":           profile.DBHost,
-			"db_name":           profile.DBName,
-			"db_user":           profile.DBUser,
-			"credential_target": profile.CredentialTarget,
-			"auth_base_url":     profile.AuthBaseURL,
-			"operator_role":     profile.OperatorRole,
+			"name":          name,
+			"active":        name == cfg.CurrentProfile,
+			"auth_base_url": profile.AuthBaseURL,
 		})
 	}
 	return map[string]any{"items": items, "current_profile": cfg.CurrentProfile}, nil
@@ -138,20 +125,6 @@ func ActiveProfile() (Profile, bool) {
 	}
 	profile, ok := cfg.Profiles[cfg.CurrentProfile]
 	return profile, ok
-}
-
-func CredentialStatus() (map[string]any, *errs.Error) {
-	profile, ok := ActiveProfile()
-	if !ok {
-		return map[string]any{"configured": false, "source": "environment", "password_env_present": os.Getenv("DB_PASSWORD") != ""}, nil
-	}
-	return map[string]any{
-		"configured":           profile.CredentialTarget != "",
-		"credential_target":    profile.CredentialTarget,
-		"source":               "profile_reference",
-		"password_env_present": os.Getenv("DB_PASSWORD") != "",
-		"stores_secret":        false,
-	}, nil
 }
 
 func save(cfg Config) *errs.Error {

@@ -1,15 +1,13 @@
 package auth
 
 import (
-	"fmt"
-	"os"
-	"strings"
-
-	"hr-cli/internal/db"
 	"hr-cli/internal/errs"
 	"hr-cli/internal/runtime"
 )
 
+// Operator is the identity returned by hr-gateway /auth/me. The CLI never
+// fabricates an operator: every field comes from the JWT validated by the
+// gateway. Source is "dingtalk_oauth" for any session backed by the broker.
 type Operator struct {
 	EID    string `json:"eid,omitempty"`
 	URID   string `json:"urid,omitempty"`
@@ -19,6 +17,10 @@ type Operator struct {
 	Source string `json:"source"`
 }
 
+// LoginRequest captures the flag inputs for `hr auth +login`. After the
+// gateway cutover the only supported login flow is DingTalk OAuth (DingTalk
+// flag implied), so the legacy direct-DB identifier flags (--eid/--badge/...)
+// are accepted for backward CLI compatibility but ignored.
 type LoginRequest struct {
 	EID            int
 	Badge          string
@@ -38,54 +40,58 @@ type LoginRequest struct {
 
 func Me() (Operator, *errs.Error) {
 	session, hasSession := runtime.LoadSession()
-	if hasSession && session.Source == "dingtalk_oauth" {
-		refreshed, err := refreshSessionIfNeeded(session, false)
+	if !hasSession || session.Source != "dingtalk_oauth" {
+		return Operator{}, errs.Authentication("not_logged_in", "no active DingTalk session; run hr auth +login --dingtalk")
+	}
+	refreshed, err := refreshSessionIfNeeded(session, false)
+	if err != nil {
+		return Operator{}, err
+	}
+	stored, err := loadStoredToken(refreshed)
+	if err != nil {
+		return Operator{}, err
+	}
+	if stored == nil {
+		return Operator{}, errs.Authentication("missing_token", "DingTalk token is missing; run hr auth +login --dingtalk")
+	}
+	operator, _, err := remoteMe(refreshed, stored)
+	if err != nil {
+		refreshed, err = refreshSessionIfNeeded(refreshed, true)
 		if err != nil {
 			return Operator{}, err
 		}
-		stored, err := loadStoredToken(refreshed)
+		stored, err = loadStoredToken(refreshed)
 		if err != nil {
 			return Operator{}, err
 		}
 		if stored == nil {
-			return Operator{}, errs.Authentication("missing_token", "DingTalk token is missing; run auth +login --dingtalk")
+			return Operator{}, errs.Authentication("missing_token", "DingTalk token is missing; run hr auth +login --dingtalk")
 		}
-		operator, expiresAt, err := remoteMe(refreshed, stored)
-		_ = expiresAt
+		operator, _, err = remoteMe(refreshed, stored)
 		if err != nil {
-			refreshed, err = refreshSessionIfNeeded(refreshed, true)
-			if err != nil {
-				return Operator{}, err
-			}
-			stored, err = loadStoredToken(refreshed)
-			if err != nil {
-				return Operator{}, err
-			}
-			if stored == nil {
-				return Operator{}, errs.Authentication("missing_token", "DingTalk token is missing; run auth +login --dingtalk")
-			}
-			operator, expiresAt, err = remoteMe(refreshed, stored)
-			_ = expiresAt
-			if err != nil {
-				return Operator{}, err
-			}
+			return Operator{}, err
 		}
-		refreshed.EID = operator.EID
-		refreshed.URID = operator.URID
-		refreshed.Badge = operator.Badge
-		refreshed.Name = operator.Name
-		refreshed.Role = operator.Role
-		refreshed.Source = operator.Source
-		if saveErr := runtime.SaveSession(refreshed); saveErr != nil {
-			return Operator{}, saveErr
-		}
-		return operator, nil
 	}
-	return CurrentOperator(), nil
+	refreshed.EID = operator.EID
+	refreshed.URID = operator.URID
+	refreshed.Badge = operator.Badge
+	refreshed.Name = operator.Name
+	refreshed.Role = operator.Role
+	refreshed.Source = "dingtalk_oauth"
+	if saveErr := runtime.SaveSession(refreshed); saveErr != nil {
+		return Operator{}, saveErr
+	}
+	if operator.Source == "" {
+		operator.Source = "dingtalk_oauth"
+	}
+	return operator, nil
 }
 
 func Status(verify bool) (map[string]any, *errs.Error) {
 	session, hasSession := runtime.LoadSession()
+	if !hasSession {
+		return map[string]any{"status": "no_session", "verified": false}, nil
+	}
 	if verify {
 		operator, err := Me()
 		if err != nil {
@@ -94,27 +100,28 @@ func Status(verify bool) (map[string]any, *errs.Error) {
 		session, hasSession = runtime.LoadSession()
 		return statusData(operator, session, hasSession, true)
 	}
-	operator := CurrentOperator()
-	return statusData(operator, session, hasSession, false)
+	operator := sessionToOperator(session)
+	return statusData(operator, session, true, false)
 }
 
 func statusData(operator Operator, session runtime.Session, hasSession bool, verified bool) (map[string]any, *errs.Error) {
 	mode := operator.Source
+	if mode == "" {
+		mode = "dingtalk_oauth"
+	}
 	status := "active"
 	data := map[string]any{"status": status, "mode": mode, "operator": operator, "verified": verified}
-	if hasSession && session.Source == "dingtalk_oauth" {
+	if hasSession {
 		stored, err := loadStoredToken(session)
 		if err != nil {
 			return nil, err
 		}
 		tokenState := tokenStatus(stored)
 		if tokenState == "expired" {
-			status = "expired"
-			data["status"] = status
+			data["status"] = "expired"
 		}
 		if tokenState == "missing" {
-			status = "missing_token"
-			data["status"] = status
+			data["status"] = "missing_token"
 		}
 		if stored != nil {
 			data["access_expires_at"] = stored.AccessTokenExpiresAt
@@ -130,116 +137,11 @@ func statusData(operator Operator, session runtime.Session, hasSession bool, ver
 	return data, nil
 }
 
-func CurrentOperator() Operator {
-	profile, hasProfile := runtime.ActiveProfile()
-	session, hasSession := runtime.LoadSession()
-	dbEnv := firstNonEmpty(os.Getenv("DB_ENV"), profile.DBEnv)
-	envOverridesAllowed := dbEnv == "test" || (!hasProfile && dbEnv == "")
-	envRole := ""
-	if envOverridesAllowed {
-		envRole = os.Getenv("HR_OPERATOR_ROLE")
-	}
-	role := firstNonEmpty(envRole, session.Role, profile.OperatorRole)
-	if role == "" {
-		if envOverridesAllowed {
-			role = "HR_ADMIN"
-		} else {
-			role = "SELF"
-		}
-	}
-	envEID := ""
-	envURID := ""
-	envBadge := ""
-	envName := ""
-	if envOverridesAllowed {
-		envEID = os.Getenv("HR_OPERATOR_EID")
-		envURID = os.Getenv("HR_OPERATOR_URID")
-		envBadge = os.Getenv("HR_OPERATOR_BADGE")
-		envName = os.Getenv("HR_OPERATOR_NAME")
-	}
-	name := firstNonEmpty(envName, session.Name, profile.OperatorName)
-	if name == "" {
-		name = os.Getenv("USERNAME")
-	}
-	if name == "" {
-		name = "local-operator"
-	}
-	source := "environment"
-	if !envOverridesAllowed || noOperatorEnv() {
-		if hasSession {
-			source = session.Source
-		} else if hasProfile && profile.OperatorName != "" {
-			source = "profile"
-		}
-	} else if envName == "" && hasProfile && profile.OperatorName != "" {
-		source = "profile"
-	}
-	return Operator{
-		EID:    firstNonEmpty(envEID, session.EID, profile.OperatorEID),
-		URID:   firstNonEmpty(envURID, session.URID, profile.OperatorURID),
-		Badge:  firstNonEmpty(envBadge, session.Badge, profile.OperatorBadge),
-		Name:   name,
-		Role:   role,
-		Source: source,
-	}
-}
-
+// Login is the public entry point for `hr auth +login`. The gateway-only CLI
+// supports a single login mechanism: DingTalk OAuth via the broker. We accept
+// the legacy --dingtalk flag for explicitness but treat it as the default.
 func Login(req LoginRequest) (map[string]any, *errs.Error) {
-	if req.DingTalk {
-		return LoginDingTalk(req)
-	}
-	row, err := resolveEmployee(req)
-	if err != nil {
-		return nil, err
-	}
-	role := strings.ToUpper(strings.TrimSpace(req.Role))
-	eid := fmt.Sprint(row["EID"])
-	dbRole, dbRoles, roleErr := ResolveDBRoleByEID(eid)
-	if roleErr != nil {
-		return nil, roleErr
-	}
-	roleSource := "db_skysecrolemember"
-	if role == "" {
-		if dbRole != "" {
-			role = dbRole
-		} else {
-			role = defaultRole()
-			roleSource = "default_fallback"
-		}
-	} else {
-		roleSource = "explicit_flag"
-	}
-	if !validRole(role) {
-		e := errs.Validation("invalid_role", "--role must be SELF, HRBP, MANAGER, SSC, or HR_ADMIN")
-		e.Param = "--role"
-		return nil, e
-	}
-	session := runtime.Session{
-		EID:    eid,
-		URID:   eid,
-		Badge:  fmt.Sprint(row["badge"]),
-		Name:   fmt.Sprint(row["NAME"]),
-		Role:   role,
-		Source: "db_session",
-	}
-	if err := runtime.SaveSession(session); err != nil {
-		return nil, err
-	}
-	return map[string]any{
-		"status":   "active",
-		"mode":     "db_session",
-		"operator": sessionToOperator(session),
-		"identity": map[string]any{
-			"email":       row["EMAIL"],
-			"ding_userid": row["ding_userid"],
-		},
-		"role_resolution": map[string]any{
-			"role":         role,
-			"source":       roleSource,
-			"db_roles":     dbRoles,
-			"db_role_top":  dbRole,
-		},
-	}, nil
+	return LoginDingTalk(req)
 }
 
 func Logout() (map[string]any, *errs.Error) {
@@ -259,99 +161,36 @@ func Logout() (map[string]any, *errs.Error) {
 	if removed {
 		status = "cleared"
 	}
-	mode := "db_session"
-	if hasSession && session.Source == "dingtalk_oauth" {
-		mode = "dingtalk_oauth"
-	}
-	return map[string]any{"status": status, "mode": mode, "remote_revoked": remoteRevoked}, nil
+	return map[string]any{"status": status, "mode": "dingtalk_oauth", "remote_revoked": remoteRevoked}, nil
 }
 
-func resolveEmployee(req LoginRequest) (map[string]any, *errs.Error) {
-	where := []string{}
-	args := []any{}
-	if req.EID != 0 {
-		where = append(where, "e.EID=?")
-		args = append(args, req.EID)
+// AccessToken returns a usable DingTalk-broker access token, refreshing it
+// in-place if it is within the refresh-ahead window. Returns ("", nil) when
+// no DingTalk session is configured.
+//
+// force=true bypasses the freshness check and always rotates the token —
+// used by the gateway client after a 401/token_expired response.
+func AccessToken(force bool) (string, *errs.Error) {
+	session, ok := runtime.LoadSession()
+	if !ok || session.Source != "dingtalk_oauth" {
+		return "", nil
 	}
-	if req.Badge != "" {
-		where = append(where, "e.badge=?")
-		args = append(args, req.Badge)
-	}
-	if req.Email != "" {
-		where = append(where, "e.EMAIL=?")
-		args = append(args, req.Email)
-	}
-	if req.Phone != "" {
-		where = append(where, "e.MOBILE=?")
-		args = append(args, req.Phone)
-	}
-	if req.Name != "" {
-		where = append(where, "e.NAME=?")
-		args = append(args, req.Name)
-	}
-	if req.DingUserID != "" {
-		where = append(where, "d.userid=?")
-		args = append(args, req.DingUserID)
-	}
-	if len(where) == 0 {
-		return nil, errs.Validation("missing_login_identifier", "provide one of --eid, --badge, --email, --phone, --name, or --ding-userid")
-	}
-	query := `
-		SELECT e.EID, e.badge, e.NAME, e.EMAIL, e.MOBILE, MAX(d.userid) AS ding_userid
-		FROM eemployee e
-		LEFT JOIN employee_dingding d ON (
-			d.email=e.EMAIL OR d.mobile=e.MOBILE OR d.job_number=e.badge OR d.job_number=SUBSTRING(e.badge, 2)
-		)
-		WHERE ` + strings.Join(where, " AND ") + `
-		GROUP BY e.EID, e.badge, e.NAME, e.EMAIL, e.MOBILE
-		ORDER BY e.STATUS ASC, e.EID ASC
-		LIMIT 3`
-	rows, err := db.QueryRows(query, args...)
+	refreshed, err := refreshSessionIfNeeded(session, force)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	if len(rows) == 0 {
-		e := errs.Validation("login_identity_not_found", "no employee matched the login identifier")
-		e.Hint = "check eemployee and employee_dingding mappings"
-		return nil, e
+	stored, err := loadStoredToken(refreshed)
+	if err != nil {
+		return "", err
 	}
-	if len(rows) > 1 {
-		e := errs.Validation("multiple_login_matches", "multiple employees matched; use --eid or --badge")
-		e.Hint = "login does not guess identity"
-		return nil, e
+	if stored == nil {
+		return "", errs.Authentication("missing_token", "DingTalk token is missing; run hr auth +login --dingtalk")
 	}
-	return rows[0], nil
+	return stored.AccessToken, nil
 }
 
 func sessionToOperator(session runtime.Session) Operator {
 	return Operator{EID: session.EID, URID: session.URID, Badge: session.Badge, Name: session.Name, Role: session.Role, Source: session.Source}
-}
-
-func defaultRole() string {
-	profile, hasProfile := runtime.ActiveProfile()
-	dbEnv := firstNonEmpty(os.Getenv("DB_ENV"), profile.DBEnv)
-	if dbEnv == "test" || (!hasProfile && dbEnv == "") {
-		return "HR_ADMIN"
-	}
-	return "SELF"
-}
-
-func validRole(role string) bool {
-	switch role {
-	case "SELF", "HRBP", "MANAGER", "SSC", "HR_ADMIN":
-		return true
-	default:
-		return false
-	}
-}
-
-func noOperatorEnv() bool {
-	for _, key := range []string{"HR_OPERATOR_EID", "HR_OPERATOR_URID", "HR_OPERATOR_BADGE", "HR_OPERATOR_NAME", "HR_OPERATOR_ROLE"} {
-		if os.Getenv(key) != "" {
-			return false
-		}
-	}
-	return true
 }
 
 func firstNonEmpty(values ...string) string {

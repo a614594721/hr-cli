@@ -3,19 +3,20 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"hr-cli/internal/capability/doctor"
+	"hr-cli/internal/gateway"
 )
 
 func newDoctorCommand() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "doctor",
-		Short: "check database and runtime health",
+		Short: "ping hr-gateway /health",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			data, err := doctor.Run()
+			out, err := gateway.Call(cmd.Context(), "GET", "/api/hr-cli/v1/health", nil, false)
 			if err != nil {
 				return err
 			}
-			return emit(cmd, data)
+			return emit(cmd, out)
 		},
 	}
+	return cmd
 }

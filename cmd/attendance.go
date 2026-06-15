@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"hr-cli/internal/capability/attendance"
+	"hr-cli/internal/gateway"
 )
 
 func newAttendanceCommand() *cobra.Command {
@@ -18,11 +18,12 @@ func attendanceRecordsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "+records",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			items, err := attendance.Records(badge, eid, from, to, limit)
+			out, err := gateway.Call(cmd.Context(), "POST", "/api/hr-cli/v1/attendance/records",
+				map[string]any{"badge": badge, "eid": eid, "from": from, "to": to, "limit": limit}, false)
 			if err != nil {
 				return err
 			}
-			return emit(cmd, map[string]any{"items": items})
+			return emit(cmd, out)
 		},
 	}
 	cmd.Flags().StringVar(&badge, "badge", "", "employee badge")
@@ -39,11 +40,12 @@ func attendanceSummaryCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "+summary",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			items, err := attendance.Summary(badge, dept, date, limit)
+			out, err := gateway.Call(cmd.Context(), "POST", "/api/hr-cli/v1/attendance/summary",
+				map[string]any{"badge": badge, "dept": dept, "date": date, "limit": limit}, false)
 			if err != nil {
 				return err
 			}
-			return emit(cmd, map[string]any{"items": items})
+			return emit(cmd, out)
 		},
 	}
 	cmd.Flags().StringVar(&badge, "badge", "", "employee badge")
@@ -59,11 +61,12 @@ func attendanceExceptionsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "+exceptions",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			items, err := attendance.Exceptions(badge, dept, from, to, limit)
+			out, err := gateway.Call(cmd.Context(), "POST", "/api/hr-cli/v1/attendance/exceptions",
+				map[string]any{"badge": badge, "dept": dept, "from": from, "to": to, "limit": limit}, false)
 			if err != nil {
 				return err
 			}
-			return emit(cmd, map[string]any{"items": items})
+			return emit(cmd, out)
 		},
 	}
 	cmd.Flags().StringVar(&badge, "badge", "", "employee badge")

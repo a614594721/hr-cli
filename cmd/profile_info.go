@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"hr-cli/internal/capability/profileinfo"
+	"hr-cli/internal/gateway"
 )
 
 func newProfileInfoCommand() *cobra.Command {
@@ -14,11 +14,12 @@ func newProfileInfoCommand() *cobra.Command {
 	prev := &cobra.Command{
 		Use: "+preview",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			data, err := profileinfo.Preview(userID, setValues, sensitive)
+			out, err := gateway.Call(cmd.Context(), "POST", "/api/hr-cli/v1/profile-info/preview",
+				map[string]any{"user_id": userID, "set": setValues, "sensitive": sensitive}, false)
 			if err != nil {
 				return err
 			}
-			return emit(cmd, data)
+			return emit(cmd, out)
 		},
 	}
 	prev.Flags().IntVar(&userID, "user-id", 0, "personal info user id")
@@ -31,11 +32,12 @@ func newProfileInfoCommand() *cobra.Command {
 		Use:  "+apply <preview-id>",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			data, err := profileinfo.Apply(args[0], yes)
+			out, err := gateway.Call(cmd.Context(), "POST", "/api/hr-cli/v1/profile-info/apply",
+				map[string]any{"preview_id": args[0], "yes": yes}, yes)
 			if err != nil {
 				return err
 			}
-			return emit(cmd, data)
+			return emit(cmd, out)
 		},
 	}
 	apply.Flags().BoolVar(&yes, "yes", false, "confirm apply")

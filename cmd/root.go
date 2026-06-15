@@ -2,14 +2,12 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"hr-cli/internal/build"
-	"hr-cli/internal/db"
 	"hr-cli/internal/errs"
 	"hr-cli/internal/output"
 )
@@ -35,7 +33,7 @@ func Execute() int {
 func NewRoot() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "hr",
-		Short:            "DB-backed HR capability gateway",
+		Short:            "HR capability CLI (thin client to hr-gateway)",
 		Version:          build.Version,
 		SilenceUsage:     true,
 		SilenceErrors:    true,
@@ -55,7 +53,6 @@ func NewRoot() *cobra.Command {
 		newDoctorCommand(),
 		newConfigCommand(),
 		newProfileCommand(),
-		newCredentialCommand(),
 		newAuthCommand(),
 		newPermCommand(),
 		newEmployeeCommand(),
@@ -63,7 +60,6 @@ func NewRoot() *cobra.Command {
 		newApprovalCommand(),
 		newTransferCommand(),
 		newProfileInfoCommand(),
-		newDBCommand(),
 	)
 	return root
 }
@@ -77,15 +73,11 @@ func meta(cmd *cobra.Command) output.Meta {
 	if command == "" {
 		command = currentCommand
 	}
-	meta := output.Meta{
+	return output.Meta{
 		"command": command,
 		"version": build.Version,
 		"format":  format,
 	}
-	for k, v := range db.Meta() {
-		meta[k] = v
-	}
-	return meta
 }
 
 func commandName(cmd *cobra.Command) string {
@@ -96,6 +88,3 @@ func commandName(cmd *cobra.Command) string {
 	return strings.Join(parts, ".")
 }
 
-func errf(format string, args ...any) *errs.Error {
-	return errs.Validation("invalid_args", fmt.Sprintf(format, args...))
-}

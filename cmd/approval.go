@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"hr-cli/internal/capability/approval"
+	"hr-cli/internal/gateway"
 )
 
 func newApprovalCommand() *cobra.Command {
@@ -13,11 +13,12 @@ func newApprovalCommand() *cobra.Command {
 	tasks := &cobra.Command{
 		Use: "+tasks",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			items, err := approval.Tasks(assignee, limit)
+			out, err := gateway.Call(cmd.Context(), "POST", "/api/hr-cli/v1/approval/tasks",
+				map[string]any{"assignee": assignee, "limit": limit}, false)
 			if err != nil {
 				return err
 			}
-			return emit(cmd, map[string]any{"items": items})
+			return emit(cmd, out)
 		},
 	}
 	tasks.Flags().StringVar(&assignee, "assignee", "", "task assignee")
@@ -27,11 +28,12 @@ func newApprovalCommand() *cobra.Command {
 	task := &cobra.Command{
 		Use: "+task",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			data, err := approval.Task(taskID)
+			out, err := gateway.Call(cmd.Context(), "POST", "/api/hr-cli/v1/approval/task",
+				map[string]any{"task_id": taskID}, false)
 			if err != nil {
 				return err
 			}
-			return emit(cmd, data)
+			return emit(cmd, out)
 		},
 	}
 	task.Flags().IntVar(&taskID, "task-id", 0, "task id")
@@ -42,11 +44,12 @@ func newApprovalCommand() *cobra.Command {
 	instances := &cobra.Command{
 		Use: "+instances",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			items, err := approval.Instances(employee, status, instanceLimit)
+			out, err := gateway.Call(cmd.Context(), "POST", "/api/hr-cli/v1/approval/instances",
+				map[string]any{"employee": employee, "status": status, "limit": instanceLimit}, false)
 			if err != nil {
 				return err
 			}
-			return emit(cmd, map[string]any{"items": items})
+			return emit(cmd, out)
 		},
 	}
 	instances.Flags().StringVar(&employee, "employee", "", "employee EID/URID")
@@ -72,11 +75,15 @@ native state-machine entrypoint (approve, reject, transfer node permissions,
 logs, callbacks) has not been verified end to end. A future release will
 enable --yes once the native chain is confirmed.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			data, err := approval.WritePlan(name, taskID, comment, reason, toBadge, dryRun, yes)
+			out, err := gateway.Call(cmd.Context(), "POST", "/api/hr-cli/v1/approval/write",
+				map[string]any{
+					"action": name, "task_id": taskID, "comment": comment,
+					"reason": reason, "to_badge": toBadge, "dry_run": dryRun, "yes": yes,
+				}, yes)
 			if err != nil {
 				return err
 			}
-			return emit(cmd, data)
+			return emit(cmd, out)
 		},
 	}
 	cmd.Flags().IntVar(&taskID, "task-id", 0, "task id")

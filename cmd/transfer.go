@@ -3,8 +3,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"hr-cli/internal/capability/transfer"
-	"hr-cli/internal/preview"
+	"hr-cli/internal/gateway"
 )
 
 func newTransferCommand() *cobra.Command {
@@ -14,11 +13,12 @@ func newTransferCommand() *cobra.Command {
 	prev := &cobra.Command{
 		Use: "+preview",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			data, err := transfer.Preview(badge, dept, job, effectDate, reason)
+			out, err := gateway.Call(cmd.Context(), "POST", "/api/hr-cli/v1/transfer/preview",
+				map[string]any{"badge": badge, "dept": dept, "job": job, "effect_date": effectDate, "reason": reason}, false)
 			if err != nil {
 				return err
 			}
-			return emit(cmd, data)
+			return emit(cmd, out)
 		},
 	}
 	prev.Flags().StringVar(&badge, "badge", "", "employee badge")
@@ -28,36 +28,22 @@ func newTransferCommand() *cobra.Command {
 	prev.Flags().StringVar(&reason, "reason", "", "change reason")
 	_ = prev.MarkFlagRequired("badge")
 
-	var yes bool
-	var dryRun bool
+	var yes, dryRun bool
 	apply := &cobra.Command{
 		Use:  "+apply <preview-id>",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			data, err := transfer.Apply(args[0], yes, dryRun)
+			out, err := gateway.Call(cmd.Context(), "POST", "/api/hr-cli/v1/transfer/apply",
+				map[string]any{"preview_id": args[0], "yes": yes, "dry_run": dryRun}, yes)
 			if err != nil {
 				return err
 			}
-			return emit(cmd, data)
+			return emit(cmd, out)
 		},
 	}
 	apply.Flags().BoolVar(&yes, "yes", false, "confirm apply")
 	apply.Flags().BoolVar(&dryRun, "dry-run", false, "run apply preflight without writing")
 
-	show := &cobra.Command{Use: "preview", Short: "preview helpers"}
-	showShow := &cobra.Command{
-		Use:  "show <preview-id>",
-		Args: cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			data, err := preview.Load(args[0])
-			if err != nil {
-				return err
-			}
-			return emit(cmd, data)
-		},
-	}
-	show.AddCommand(showShow)
-
-	root.AddCommand(prev, apply, show)
+	root.AddCommand(prev, apply)
 	return root
 }

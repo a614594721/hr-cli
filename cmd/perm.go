@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"hr-cli/internal/perm"
+	"hr-cli/internal/gateway"
 )
 
 func newPermCommand() *cobra.Command {
@@ -13,7 +13,12 @@ func newPermCommand() *cobra.Command {
 	explain := &cobra.Command{
 		Use: "explain",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return emit(cmd, perm.Explain(action, targetEID))
+			out, err := gateway.Call(cmd.Context(), "POST", "/api/hr-cli/v1/perm/explain",
+				map[string]any{"action": action, "target_eid": targetEID}, false)
+			if err != nil {
+				return err
+			}
+			return emit(cmd, out)
 		},
 	}
 	explain.Flags().StringVar(&action, "action", "", "permission action")
