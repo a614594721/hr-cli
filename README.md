@@ -8,6 +8,7 @@
 
 ## 为什么用 hr-cli
 
+- **Agent-Native 设计** — 7 份结构化 [Skills](skills/) 开箱即用,Claude / Cursor 等 AI Agent 零额外配置可上手。
 - **零凭证**:用户机器上没有 `DB_PASSWORD`、没有数据库主机、没有任何业务 SQL。
 - **AI Agent 友好**:命令、参数、输出、错误全部结构化,适合自然语言驱动。
 - **权限不可绕过**:鉴权、scope、字段权限、生产保护全部在 gateway 服务端执行,客户端无法跳过。
@@ -77,7 +78,23 @@ hr employee +find --badge P000487
 
 ## 快速开始 (AI Agent)
 
-> 给协助用户安装的 AI Agent。每步只一条命令,顺序执行。
+> 给协助用户的 AI Agent。**先读 [`skills/hr-shared/SKILL.md`](skills/hr-shared/SKILL.md)** —— 它定义了认证、错误 envelope、scope 模型、写操作两阶段安全模式;每个 capability skill 都假设你已经读过 hr-shared。
+
+### Skills 索引
+
+每个业务域一份 SKILL.md,Claude Skill 风格的 frontmatter + 命令骨架 + 输出契约 + Agent 规则:
+
+| Skill | 用途 |
+|---|---|
+| [`hr-shared`](skills/hr-shared/SKILL.md) | **必读**。profile/auth/error/scope/写两阶段 |
+| [`hr-employee`](skills/hr-employee/SKILL.md) | 员工查询(find / get) |
+| [`hr-attendance`](skills/hr-attendance/SKILL.md) | 考勤查询(records / summary / exceptions) |
+| [`hr-approval`](skills/hr-approval/SKILL.md) | 审批查询(1.0 仅查,不批) |
+| [`hr-transfer`](skills/hr-transfer/SKILL.md) | 调动 preview/apply |
+| [`hr-profile-info`](skills/hr-profile-info/SKILL.md) | 个人资料 preview/apply |
+| [`hr-perm`](skills/hr-perm/SKILL.md) | 权限解释 / 写动作 dry-check |
+
+### 安装与首次登录(每步只一条命令,顺序执行)
 
 **Step 1 — 安装**
 
@@ -116,7 +133,7 @@ hr auth +me
 
 返回 `{"data": {"eid": "...", "name": "...", "role": "..."}}` 即成功。
 
-后续业务命令(`employee +find`、`attendance +records` 等)直接调用即可,access_token 自动注入。
+后续业务命令(`employee +find`、`attendance +records` 等)直接调用即可,access_token 自动注入。**遇到 `authorization/action_denied` 或 `target_out_of_scope`**,先用 `hr perm explain --action <name> --target-eid <X>` 诊断。
 
 ## 命令体系
 
