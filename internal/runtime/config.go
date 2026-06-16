@@ -9,6 +9,12 @@ import (
 	"hr-cli/internal/errs"
 )
 
+// DefaultAuthBaseURL is the production hr-gateway URL baked into the
+// distributed binary. Users who install via npm hit this gateway without
+// any profile setup; `hr-cli profile add ... --auth-base-url ...` still
+// works as an override for local development.
+const DefaultAuthBaseURL = "http://139.224.32.44:3002"
+
 type Config struct {
 	CurrentProfile string             `json:"current_profile,omitempty"`
 	Profiles       map[string]Profile `json:"profiles,omitempty"`
@@ -121,10 +127,16 @@ func ListProfiles() (map[string]any, *errs.Error) {
 func ActiveProfile() (Profile, bool) {
 	cfg, err := Load()
 	if err != nil || cfg.CurrentProfile == "" {
-		return Profile{}, false
+		return Profile{AuthBaseURL: DefaultAuthBaseURL}, true
 	}
 	profile, ok := cfg.Profiles[cfg.CurrentProfile]
-	return profile, ok
+	if !ok {
+		return Profile{AuthBaseURL: DefaultAuthBaseURL}, true
+	}
+	if profile.AuthBaseURL == "" {
+		profile.AuthBaseURL = DefaultAuthBaseURL
+	}
+	return profile, true
 }
 
 func save(cfg Config) *errs.Error {

@@ -1,6 +1,6 @@
 {
   "name": "@wubang9527/hr-cli",
-  "version": "1.0.0-rc.1",
+  "version": "1.0.0-rc.2",
   "description": "hr-cli — DB-backed HR capability gateway, modeled after Lark CLI",
   "bin": {
     "hr-cli": "scripts/run.js"
@@ -31,6 +31,7 @@
     "bin/hr-cli-darwin-amd64",
     "bin/hr-cli-darwin-arm64",
     "bin/hr-cli-linux-amd64",
+    "bin/hr-cli-linux-arm64",
     "bin/hr-cli-windows-amd64.exe",
     "README.md",
     "LICENSE",
