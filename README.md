@@ -25,7 +25,7 @@
 ### 一键安装(推荐)
 
 ```bash
-npm install -g @a614594721/hr-cli
+npm install -g @wubang9527/hr-cli
 hr-cli --version
 ```
 
@@ -35,7 +35,7 @@ hr-cli --version
 
 ```bash
 HR_CLI_BINARY_URL=file:///path/to/hr-cli-1.0.0-rc.2-linux-amd64.tar.gz \
-  npm install -g @a614594721/hr-cli
+  npm install -g @wubang9527/hr-cli
 ```
 
 ### 直接下载二进制
@@ -99,7 +99,7 @@ hr employee +find --badge P000487
 **Step 1 — 安装**
 
 ```bash
-npm install -g @a614594721/hr-cli
+npm install -g @wubang9527/hr-cli
 ```
 
 **Step 2 — 配置 gateway 地址**

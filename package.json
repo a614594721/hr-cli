@@ -1,5 +1,5 @@
 {
-  "name": "@a614594721/hr-cli",
+  "name": "@wubang9527/hr-cli",
   "version": "1.0.0-rc.1",
   "description": "hr-cli — DB-backed HR capability gateway, modeled after Lark CLI",
   "bin": {
@@ -22,12 +22,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/a614594721/hr-cli.git"
+    "url": "git+https://gitee.com/wubang58/hr-cli.git"
   },
   "license": "MIT",
   "files": [
     "scripts/install.js",
     "scripts/run.js",
+    "bin/hr-cli-darwin-amd64",
+    "bin/hr-cli-darwin-arm64",
+    "bin/hr-cli-linux-amd64",
+    "bin/hr-cli-windows-amd64.exe",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"
