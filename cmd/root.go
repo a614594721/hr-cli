@@ -60,6 +60,7 @@ func NewRoot() *cobra.Command {
 		newApprovalCommand(),
 		newTransferCommand(),
 		newProfileInfoCommand(),
+		newSkillsCommand(),
 	)
 	return root
 }

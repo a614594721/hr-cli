@@ -1,6 +1,6 @@
 {
   "name": "@wubang9527/hr-cli",
-  "version": "1.0.0-rc.2",
+  "version": "1.0.0-rc.4",
   "description": "hr-cli — DB-backed HR capability gateway, modeled after Lark CLI",
   "bin": {
     "hr-cli": "scripts/run.js"

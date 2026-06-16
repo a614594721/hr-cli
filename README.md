@@ -78,7 +78,15 @@ hr employee +find --badge P000487
 
 ## 快速开始 (AI Agent)
 
-> 给协助用户的 AI Agent。**先读 [`skills/hr-shared/SKILL.md`](skills/hr-shared/SKILL.md)** —— 它定义了认证、错误 envelope、scope 模型、写操作两阶段安全模式;每个 capability skill 都假设你已经读过 hr-shared。
+> 给协助用户的 AI Agent。**hr-cli 二进制内嵌了所有 skills**,装完包后用 `hr-cli skills` 直接读取,不需要克隆仓库或浏览 gitee。**先读 hr-shared** —— 它定义了认证、错误 envelope、scope 模型、写操作两阶段安全模式;每个 capability skill 都假设你已经读过 hr-shared。
+
+```bash
+hr-cli skills list                  # 列出所有 skill 及 description
+hr-cli skills read hr-shared        # 读 hr-shared SKILL.md (必读)
+hr-cli skills read hr-employee      # 读员工查询 skill
+```
+
+`skills read` 默认输出 JSON envelope (`data.content` 是 markdown 原文),Agent 直接解析;人工查可加 `--format table` 拿 raw markdown。
 
 ### Skills 索引
 
