@@ -1,6 +1,6 @@
 # hr-cli
 
-> 面向 HR 运维、HRBP 和 AI Agent 的人力命令行工具,通过 [hr-gateway](../hr-gateway) 安全访问公司 HR 数据。
+> 面向 HR 运维、HRBP 和 AI Agent 的人力命令行工具,通过 hr-gateway 安全访问公司 HR 数据。
 
 `hr-cli` 是一个**纯 HTTP 瘦客户端**,本身不持有任何数据库凭证、不实现权限决策、不写审计。所有数据库连接、perm/scope 决策、审计写入都发生在 hr-gateway 服务端;客户端只持有钉钉 OAuth 颁发的短期 access_token,通过 HTTPS 调用 gateway。
 
@@ -20,7 +20,7 @@
 ### 前置要求
 
 - Node.js 16+(npm)
-- 公司内网可达的 hr-gateway 实例(本机开发可启动 [`make dev-gateway`](../hr-gateway/Makefile))
+- 公司内网可达的 hr-gateway 实例
 
 ### 一键安装(推荐)
 
@@ -30,13 +30,6 @@ hr-cli --version
 ```
 
 `postinstall` 会从 GitHub Releases 下载对应平台(darwin/linux/windows × amd64/arm64)的预编译二进制并校验 SHA256。装包后 `hr-cli` 在 PATH 中。
-
-内网代理或离线安装:
-
-```bash
-HR_CLI_BINARY_URL=file:///path/to/hr-cli-1.0.0-rc.2-linux-amd64.tar.gz \
-  npm install -g @wubang9527/hr-cli
-```
 
 ### 直接下载二进制
 
@@ -57,17 +50,13 @@ go build -o hr-cli .
 
 > **AI Agent 看这里**:跳到 [快速开始 (AI Agent)](#快速开始-ai-agent),那里写好了所有 Agent 需要的步骤。
 
-3 步上手:
+2 步上手:
 
 ```bash
-# 1. 配置 gateway 地址(一次性)
-hr profile add prod --auth-base-url https://hr-gateway.internal.example.com
-hr profile use prod
-
-# 2. 钉钉 OAuth 登录(浏览器跳转)
+# 1. 钉钉 OAuth 登录(浏览器跳转)
 hr auth +login --dingtalk
 
-# 3. 验证 + 用起来
+# 2. 验证 + 用起来
 hr auth +me
 hr employee +find --badge P000487
 ```
@@ -110,16 +99,7 @@ hr-cli skills read hr-employee      # 读员工查询 skill
 npm install -g @wubang9527/hr-cli
 ```
 
-**Step 2 — 配置 gateway 地址**
-
-向用户索取 gateway URL,然后:
-
-```bash
-hr profile add prod --auth-base-url <gateway_url>
-hr profile use prod
-```
-
-**Step 3 — 钉钉 OAuth 登录**
+**Step 2 — 钉钉 OAuth 登录**
 
 > 这一步必须在后台运行,因为命令会一直等浏览器授权完成。提取输出中的 `auth_url` 字段发给用户,告诉用户在浏览器中完成授权。
 
@@ -133,7 +113,7 @@ hr auth +login --dingtalk --no-wait
 hr auth +login --dingtalk --login-id <login_id>
 ```
 
-**Step 4 — 验证**
+**Step 3 — 验证**
 
 ```bash
 hr auth +me
@@ -288,7 +268,6 @@ hr approval +instances --employee 12345 --status pending
 - [钉钉 OAuth 登录](docs/dingtalk-oauth-auth.md)
 - [命令契约](docs/command-contract.md)
 - [错误契约](docs/error-contract.md)
-- [bi_ehr revert 计划](docs/bi-ehr-revert-plan.md)
 - [npm 发布计划](docs/npm-publish-plan.md)
 
 ## 仓库关系
@@ -297,7 +276,6 @@ hr approval +instances --employee 12345 --status pending
 |---|---|
 | [hr-cli](.) | 瘦客户端(npm 包) |
 | `hr-gateway`(`D:\projects\hr-gateway`) | HR 能力网关,持有 DB 凭证,实现 perm/audit |
-| `bi_ehr` | 业务系统,**不再承担** hr-cli 的 OAuth broker 职责 |
 
 ## 许可证
 
