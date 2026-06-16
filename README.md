@@ -270,13 +270,6 @@ hr approval +instances --employee 12345 --status pending
 - [错误契约](docs/error-contract.md)
 - [npm 发布计划](docs/npm-publish-plan.md)
 
-## 仓库关系
-
-| 仓库 | 角色 |
-|---|---|
-| [hr-cli](.) | 瘦客户端(npm 包) |
-| `hr-gateway`(`D:\projects\hr-gateway`) | HR 能力网关,持有 DB 凭证,实现 perm/audit |
-
 ## 许可证
 
 [MIT License](LICENSE)
