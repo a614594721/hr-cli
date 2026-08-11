@@ -5,7 +5,8 @@
 hr-cli 已从「胖客户端 + 直连 DB」迁移为「瘦客户端 + hr-gateway」架构。详见 `docs/hr-cli-architecture-credential-isolation.md`。
 
 - **hr-cli**(本仓库):纯 HTTP 客户端,不持有 DB 凭证,不实现 perm/scope/audit。
-- **hr-gateway**(`D:\projects\hr-gateway`):承担 DB 直连 + perm/scope 决策 + 审计 + DingTalk OAuth broker。
+- **hr-gateway**(`D:\projects\hr-gateway`):承担 DingTalk OAuth/JWT、操作者身份、CLI 动作授权、preview/apply、审计入口和遗留 gateway 能力。
+- **hr-openapi-service**(`D:\projects\hr-openapi-service`):承接已迁移的员工读取等可复用 HR API，并执行用户模式数据范围过滤。
 - **bi_ehr**:OAuth broker 已迁出,bi_ehr 回到「业务系统」本职。
 
 **红线**:不允许 hr-cli 走 DB 直连旁路。任何「绕过 gateway」的需求都说明 gateway 缺接口,应在 gateway 侧补,而不是回退架构。
@@ -22,7 +23,9 @@ hr-cli 配置只需要 `auth_base_url`,联调流程见下文「hr-gateway 联调
 
 ## 测试身份
 
-默认操作者为 **吴邦**(HR_ADMIN),所有读/写命令默认以吴邦作为操作者或目标员工。测试其它 role 的 scope 行为时通过 `hr auth impersonate --eid <EID>` 切换 —— 该接口仅 HR_ADMIN 可调,签发 15 分钟 TTL 短 token,强制写审计。
+默认操作者为 **吴邦**(HR_ADMIN),所有读/写命令默认以吴邦作为操作者或目标员工。
+gateway 虽然存在 impersonate HTTP 接口，但当前 CLI 命令树没有注册
+`hr auth impersonate`；除非命令已经实现并通过 `hr auth --help` 验证，否则不要向用户提供该命令。
 
 **不再支持** `HR_OPERATOR_EID=...` 这类本机伪造身份方式:客户端不再读 `HR_OPERATOR_*`,operator 只能由 gateway 颁发的 access_token 解出。
 
@@ -46,7 +49,8 @@ hr-cli 配置只需要 `auth_base_url`,联调流程见下文「hr-gateway 联调
 
 ## 权限模型
 
-实现位置已迁移至 `hr-gateway/internal/perm/` 与 `hr-gateway/internal/auth/`,**hr-cli 客户端不再有这些代码**。
+JWT/CLI 动作授权位于 `hr-gateway/internal/auth/` 与 `internal/perm/`；员工、
+考勤、审批等已迁移读取的数据范围由 `hr-openapi-service` 执行。**hr-cli 客户端不包含这些权限实现**。
 
 角色优先级(高→低):`HR_ADMIN > SSC > HRBP > MANAGER > SELF`。DB 角色映射:
 
@@ -61,8 +65,20 @@ hr-cli 配置只需要 `auth_base_url`,联调流程见下文「hr-gateway 联调
 - gateway 在签发 access_token 时反查 EID 的角色集合,按优先级取最高写入 JWT claim。
 - 目标级 scope:`HR_ADMIN` 与 `SSC` 旁路;其它角色未命中即 `target_out_of_scope`。
 - **scope 非实时**:由批跑(`pro_cr_PsoRadiationRangeEidlist`)定时重建,调动后 scope 生效需等下一轮批跑。这点会影响测试预期。
-- `employee +find` 在 SQL 层加 scope 过滤,响应包含 `scope` 元数据用于排错。
-- 客户端要查权限时调 `hr perm explain`(对应 `POST /api/hr-cli/v1/perm/explain`)。
+- `employee +find`、考勤读取和审批读取通过 gateway 转发到 HR OpenAPI，上游在 SQL 层加 scope 过滤。
+- 客户端要查权限时调 `hr perm explain`；gateway 保持路由契约并由上游返回范围解释。
+
+## 当前测试环境
+
+当前默认 gateway 地址 `http://139.224.32.44:3002` 对应 `2026-08-11` 迁移后的
+测试部署。服务运行在 JumpServer 资产 `test-3th-ehr服务`（`172.16.15.133`，
+主机名 `qa1-ehr`），不再运行在 `wubang-106`。
+
+hr-cli 本仓库不负责服务端部署。需要查服务状态、日志、重启或发布时：
+
+- 连接规则见 `D:\projects\jumpserver_ssh\AGENTS.md`；
+- 部署规则见 `D:\projects\hr-platform-workspace\deploy\qa1-ehr`；
+- 不要使用 `ssh wubang-106`，也不要让 hr-cli 获得服务器或数据库凭证。
 
 ## 审计
 
@@ -76,7 +92,7 @@ hr-cli 配置只需要 `auth_base_url`,联调流程见下文「hr-gateway 联调
 
 - 涉及数据库表、字段、存储过程、触发器、审批流、考勤、员工、调动、个人资料等业务含义或链路不清楚时,优先参考 `D:\projects\DB-Knowledge`。
 - 该目录可作为 HR 数据库业务知识库使用,包括表结构文档、存储过程说明、变更脚本、触发器、索引和历史方案。
-- 提取当前功能需要的表/字段/链路结论时,在 hr-gateway 项目文档中记录必要摘要(因为业务 SQL 现在写在 gateway 里)。
+- 提取当前功能需要的表/字段/链路结论时,在实际拥有 SQL 的仓库文档中记录必要摘要；已迁移读取通常记录在 hr-openapi-service。
 - 如果实际测试库 schema 与 `D:\projects\DB-Knowledge` 文档不一致,以当前测试库只读探查结果为准,并在相关文档中注明差异。
 
 ## hr-gateway 联调

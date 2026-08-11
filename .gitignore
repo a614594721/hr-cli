@@ -7,6 +7,7 @@ venv/
 hr.exe
 hr-cli.exe
 dist/
+.npm-release/
 node_modules/
 bin/
 *.tar.gz
