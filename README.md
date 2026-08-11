@@ -47,18 +47,16 @@ npm install -g @wubang9527/hr-cli
 hr-cli --version
 ```
 
-`postinstall` 会从 GitHub Releases 下载对应平台(darwin/linux/windows × amd64/arm64)的预编译二进制并校验 SHA256。装包后 `hr-cli` 在 PATH 中。
+npm 包内已经包含对应平台(darwin/linux/windows × amd64/arm64)的预编译二进制。`postinstall` 只在本地选择并安装匹配的文件,不再访问 GitHub 或 Gitee 下载二进制。装包后 `hr-cli` 在 PATH 中。
 
-### 直接下载二进制
-
-到 [Releases](https://github.com/a614594721/hr-cli/releases) 下载对应平台压缩包,解压后把 `hr-cli` 放到 PATH。
+> Gitee 仓库只保存源码,不提交 `bin/` 发布产物。不要使用 `npm install -g git+https://gitee.com/wubang58/hr-cli.git`;正式安装渠道是上面的公共 npm 包。
 
 ### 源码构建
 
 ```bash
-git clone https://github.com/a614594721/hr-cli.git
+git clone https://gitee.com/wubang58/hr-cli.git
 cd hr-cli
-go build -o hr-cli .
+go build -trimpath -ldflags "-X hr-cli/internal/build.Version=dev" -o hr-cli .
 ./hr-cli --version
 ```
 

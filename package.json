@@ -1,12 +1,16 @@
 {
   "name": "@wubang9527/hr-cli",
-  "version": "1.0.0-rc.4",
-  "description": "hr-cli — DB-backed HR capability gateway, modeled after Lark CLI",
+  "version": "1.0.0-rc.5",
+  "description": "hr-cli — thin HTTP client for hr-gateway, modeled after Lark CLI",
   "bin": {
     "hr-cli": "scripts/run.js"
   },
   "scripts": {
-    "postinstall": "node scripts/install.js"
+    "build:npm": "node scripts/build-npm-binaries.js",
+    "postinstall": "node scripts/install.js",
+    "prepack": "npm run build:npm",
+    "prepublishOnly": "npm run test:release",
+    "test:release": "node scripts/test-npm-package.js"
   },
   "os": [
     "darwin",
@@ -33,6 +37,7 @@
     "bin/hr-cli-linux-amd64",
     "bin/hr-cli-linux-arm64",
     "bin/hr-cli-windows-amd64.exe",
+    "bin/hr-cli-windows-arm64.exe",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"

@@ -1,86 +1,55 @@
-# npm 1.0.0-rc.1 下线 + 1.0.0-rc.2 发布计划
+# npm 发布流程
 
-> 对应 hr-cli 任务:#11。
-> 状态:**1.0.0-rc.1 从未实际发布到 npmjs.org**(2026-06-14 14:19 UTC `npm view` 返回 404)。原方案大幅简化。
+`@wubang9527/hr-cli` 是 hr-cli 的正式分发包。Gitee 仓库保存源码,
+预编译二进制由发布流程生成并装入 npm tarball;不支持直接通过 Gitee Git
+地址执行 `npm install`。
 
-## 现状
+## 发布前提
+
+- npm 登录账号必须是 `wubang9527`。
+- 工作区必须基于最新 `origin/master`,且除本次发布文件外没有其它改动。
+- `package.json` 版本尚未出现在 npm registry。
+- 发布版本必须创建同名 Git 标签,例如 `v1.0.0-rc.5`。
+
+## 自动化命令
 
 ```bash
-$ npm view @a614594721/hr-cli time
-npm error 404 Not Found - GET https://registry.npmjs.org/@a614594721%2fhr-cli
+# 生成 darwin/linux/windows × amd64/arm64 六个平台二进制。
+# 版本、提交和构建日期会通过 Go ldflags 注入。
+npm run build:npm
+
+# 生成 npm tarball,安装到临时目录,验证文件矩阵及 --version。
+npm run test:release
+
+# 发布时 prepublishOnly 会再次运行上述隔离验证。
+npm publish --access public
 ```
 
-包名在 `package.json` 里声明,GitHub Release 也打了 tag,但没有任何 `npm publish` 历史。
+`npm run test:release` 成功后会自动清理临时安装目录和测试 tarball。
+任一平台文件缺失、安装脚本失败、包版本与二进制版本不一致时都会返回非零状态,
+阻止 `npm publish`。
 
-## 简化后的步骤
+## 完整发布顺序
 
-不需要 unpublish,不需要 deprecate,只需在架构迁移完成后第一次发布:
+1. 更新 `package.json` 和 `CHANGELOG.md`。
+2. 运行 `go test ./...`。
+3. 运行 `npm run test:release`。
+4. 提交发布变更。
+5. 在提交上创建带说明的标签 `v<package-version>`。
+6. 执行 `npm publish --access public`。
+7. 推送发布提交和标签到 Gitee。
+8. 在干净目录执行最终验证:
 
-1. **P4 完成后**,即:
-   - hr-gateway 在生产稳定运行
-   - hr-cli `--via-gateway` 已反转为默认
-   - `internal/{db,perm,audit,capability,preview}` 已从客户端删除
-   - `cmd/db.go` 已删除
-
-2. 更新版本号:
    ```bash
-   cd D:/projects/hr-cli
-   # 改 package.json: "version": "1.0.0-rc.2"
+   npm install -g @wubang9527/hr-cli@<version>
+   npm ls -g --depth=0 @wubang9527/hr-cli
+   hr-cli --version
    ```
 
-3. 验证 `scripts/install.js` 与新二进制下载链路一致:
-   - GitHub Releases 资产命名 `hr-cli-1.0.0-rc.2-{darwin|linux|windows}-{amd64|arm64}.{tar.gz|zip}`
-   - `checksums.txt` 已 sign
+## 历史说明
 
-4. 打 tag 并推送:
-   ```bash
-   git tag v1.0.0-rc.2
-   git push origin v1.0.0-rc.2
-   ```
-
-5. GitHub Actions 构建多平台二进制并发布 Release(若已配置)。手动情况:
-   ```bash
-   make release  # 或本地 cross-compile
-   gh release create v1.0.0-rc.2 ./dist/* --notes-file CHANGELOG.md
-   ```
-
-6. 首次 npm publish(需要 npm login + 2FA):
-   ```bash
-   npm whoami           # 确认账号
-   npm publish --access public
-   ```
-
-7. 验证:
-   ```bash
-   # 干净环境
-   npm install -g @a614594721/hr-cli
-   hr-cli doctor       # 应该 ping gateway,而不是连 DB
-   ```
-
-## 旧 GitHub Release `v1.0.0-rc.1` 处理
-
-不需要硬删。建议在 Release 描述里加一段:
-
-> ⚠️ **DEPRECATED.** This release shipped a fat-client architecture that
-> required end-user MySQL credentials. It is incompatible with the
-> server-side hr-gateway architecture introduced in `v1.0.0-rc.2`.
-> Please install `v1.0.0-rc.2` or later.
-
-## 对外沟通
-
-由于 npm 没有任何用户:
-
-- 不需要破坏性变更声明
-- 不需要 migration guide
-- 不需要 changelog 中标注「breaking」(因为没有「previous」)
-- README 第一段直接写当前架构,无须解释历史
-
-## 何时执行
-
-按 hr-cli `docs/hr-cli-architecture-credential-isolation.md` §6:
-
-| 阶段 | 状态 | npm 操作 |
-|---|---|---|
-| P0–P3 | 进行中 | 不发包(client 还在用 DB 直连) |
-| P4 完成 | — | 发 1.0.0-rc.2 |
-| 生产稳定一周 | — | 升 GA → 1.0.0 |
+- 旧作用域 `@a614594721/hr-cli` 从未发布到 npmjs.org,不要再查询或安装。
+- `1.0.0-rc.4` 的 npm 元数据是 rc.4,但包内二进制没有注入版本号,
+  `hr-cli --version` 会显示 `0.0.0-dev`;该问题从 rc.5 起修复。
+- 旧 `v1.0.0-rc.2` 标签与包元数据不一致,不要移动或复用历史标签;
+  后续版本以 npm 版本、发布提交和同名不可变标签三者一致为准。

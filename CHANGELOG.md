@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0-rc.5] - 2026-08-11
+
+### Fixed
+
+- Build every npm binary with the package version, Git commit, and build date
+  injected into `internal/build`, so `hr-cli --version` matches the published
+  npm version instead of reporting `0.0.0-dev`.
+- Add the missing Windows ARM64 binary. The package already advertised ARM64
+  Windows support, but previous releases did not contain that artifact.
+- Make the npm package the canonical installation artifact. Installing from
+  the Gitee Git repository is not supported because release binaries are
+  intentionally excluded from Git.
+
+### Added
+
+- Cross-platform `build:npm` automation for all six supported OS/architecture
+  targets.
+- A release gate that packs the npm tarball, installs it into a clean temporary
+  prefix, verifies all bundled binaries, and asserts that the installed CLI
+  reports the same version as `package.json`.
+
+### Changed
+
+- Refresh installation and release documentation for the Gitee source
+  repository and the public `@wubang9527/hr-cli` npm package.
+
 ## [1.0.0-rc.1] - 2026-06-14
 
 First release candidate. The CLI is feature-complete for read-only and
