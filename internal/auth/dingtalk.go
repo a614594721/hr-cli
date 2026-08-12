@@ -105,7 +105,7 @@ func authBaseURL(flagValue string) (string, *errs.Error) {
 	value := firstNonEmpty(flagValue, os.Getenv("HR_AUTH_BASE_URL"), os.Getenv("HR_CLI_AUTH_BASE_URL"), profile.AuthBaseURL)
 	value = strings.TrimRight(strings.TrimSpace(value), "/")
 	if value == "" {
-		e := errs.Config("missing_auth_base_url", "DingTalk login requires --auth-base-url, HR_AUTH_BASE_URL, or profile auth_base_url")
+		e := errs.Config("missing_auth_base_url", "authentication requires --auth-base-url, HR_AUTH_BASE_URL, or profile auth_base_url")
 		e.Param = "--auth-base-url"
 		return "", e
 	}
@@ -150,13 +150,13 @@ func pollRemoteLogin(baseURL string, started loginStartResponse, timeout time.Du
 			return result, err
 		}
 		if time.Now().After(deadline) {
-			return result, errs.Network("login_timeout", "DingTalk login timed out")
+			return result, errs.Network("login_timeout", "legacy gateway login timed out")
 		}
 		time.Sleep(interval)
 	}
 }
 
-func refreshSessionIfNeeded(session appruntime.Session, force bool) (appruntime.Session, *errs.Error) {
+func refreshLegacySessionIfNeeded(session appruntime.Session, force bool) (appruntime.Session, *errs.Error) {
 	if session.Source != "dingtalk_oauth" || session.AuthBaseURL == "" || session.EID == "" {
 		return session, nil
 	}
@@ -258,6 +258,7 @@ func revokeRemoteSession(session appruntime.Session) bool {
 
 func sessionFromToken(baseURL string, token tokenResponse) appruntime.Session {
 	return appruntime.Session{
+		Provider:              ProviderLegacyGateway,
 		EID:                   token.Operator.EID,
 		URID:                  token.Operator.URID,
 		Badge:                 token.Operator.Badge,

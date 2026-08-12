@@ -12,6 +12,7 @@ import (
 )
 
 type Session struct {
+	Provider              string `json:"provider,omitempty"`
 	EID                   string `json:"eid,omitempty"`
 	URID                  string `json:"urid,omitempty"`
 	Badge                 string `json:"badge,omitempty"`
@@ -19,6 +20,12 @@ type Session struct {
 	Role                  string `json:"role"`
 	Source                string `json:"source"`
 	AuthBaseURL           string `json:"auth_base_url,omitempty"`
+	Issuer                string `json:"issuer,omitempty"`
+	ClientID              string `json:"client_id,omitempty"`
+	Audience              string `json:"audience,omitempty"`
+	Scope                 string `json:"scope,omitempty"`
+	TokenURL              string `json:"token_url,omitempty"`
+	RevocationURL         string `json:"revocation_url,omitempty"`
 	AccessTokenExpiresAt  string `json:"access_token_expires_at,omitempty"`
 	RefreshTokenExpiresAt string `json:"refresh_token_expires_at,omitempty"`
 	CreatedAt             string `json:"created_at"`
@@ -51,7 +58,7 @@ func LoadSession() (Session, bool) {
 	if err := json.Unmarshal(data, &session); err != nil {
 		return Session{}, false
 	}
-	if session.Name == "" {
+	if session.Name == "" && session.Provider == "" && session.Source == "" {
 		return Session{}, false
 	}
 	if bytes.Contains(data, []byte(`"access_token"`)) || bytes.Contains(data, []byte(`"refresh_token"`)) {

@@ -19,16 +19,24 @@ const refreshAhead = 5 * time.Minute
 var safeTokenIDChars = regexp.MustCompile(`[^a-zA-Z0-9._-]`)
 
 type StoredToken struct {
+	Provider              string `json:"provider,omitempty"`
 	AuthBaseURL           string `json:"authBaseUrl"`
+	Issuer                string `json:"issuer,omitempty"`
+	ClientID              string `json:"clientId,omitempty"`
 	EID                   string `json:"eid"`
+	TokenType             string `json:"tokenType,omitempty"`
 	AccessToken           string `json:"accessToken"`
 	AccessTokenExpiresAt  string `json:"accessTokenExpiresAt"`
 	RefreshToken          string `json:"refreshToken"`
 	RefreshTokenExpiresAt string `json:"refreshTokenExpiresAt"`
+	Scope                 string `json:"scope,omitempty"`
 	GrantedAt             string `json:"grantedAt"`
 }
 
 func tokenAccount(session appruntime.Session) string {
+	if session.Provider == ProviderHydra {
+		return fmt.Sprintf("hydra:%s:%s", normalizeAccountPart(session.Issuer), normalizeAccountPart(session.ClientID))
+	}
 	return fmt.Sprintf("dingtalk:%s:%s", authBaseAccountKey(session.AuthBaseURL), normalizeAccountPart(session.EID))
 }
 
@@ -42,6 +50,7 @@ func normalizeAccountPart(value string) string {
 
 func storeToken(session appruntime.Session, token tokenResponse) *errs.Error {
 	stored := StoredToken{
+		Provider:              ProviderLegacyGateway,
 		AuthBaseURL:           session.AuthBaseURL,
 		EID:                   session.EID,
 		AccessToken:           token.AccessToken,
@@ -50,6 +59,10 @@ func storeToken(session appruntime.Session, token tokenResponse) *errs.Error {
 		RefreshTokenExpiresAt: token.RefreshExpiresAt,
 		GrantedAt:             time.Now().Format(time.RFC3339),
 	}
+	return storeStoredToken(session, &stored)
+}
+
+func storeStoredToken(session appruntime.Session, stored *StoredToken) *errs.Error {
 	data, err := json.Marshal(stored)
 	if err != nil {
 		return errs.New("internal", "token_encode_failed", err.Error(), 5)
@@ -76,7 +89,11 @@ func loadStoredToken(session appruntime.Session) (*StoredToken, *errs.Error) {
 }
 
 func removeStoredToken(session appruntime.Session) *errs.Error {
-	if session.AuthBaseURL == "" || session.EID == "" {
+	if session.Provider == ProviderHydra {
+		if session.Issuer == "" || session.ClientID == "" {
+			return nil
+		}
+	} else if session.AuthBaseURL == "" || session.EID == "" {
 		return nil
 	}
 	if err := keychain.Remove(keychain.ServiceName, tokenAccount(session)); err != nil {
@@ -92,7 +109,16 @@ func tokenStatus(token *StoredToken) string {
 	now := time.Now()
 	accessExpiresAt, accessOK := parseTokenTime(token.AccessTokenExpiresAt)
 	refreshExpiresAt, refreshOK := parseTokenTime(token.RefreshTokenExpiresAt)
-	if !refreshOK || !now.Before(refreshExpiresAt) {
+	if token.RefreshToken == "" {
+		if accessOK && now.Before(accessExpiresAt) {
+			return "valid"
+		}
+		return "expired"
+	}
+	if refreshOK && !now.Before(refreshExpiresAt) {
+		return "expired"
+	}
+	if !refreshOK && token.Provider != ProviderHydra {
 		return "expired"
 	}
 	if !accessOK || now.After(accessExpiresAt.Add(-refreshAhead)) {

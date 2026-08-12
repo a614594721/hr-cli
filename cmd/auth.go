@@ -29,13 +29,13 @@ func newAuthCommand() *cobra.Command {
 			return emit(cmd, data)
 		},
 	}
-	statusCmd.Flags().BoolVar(&statusVerify, "verify", false, "verify token against the auth broker")
+	statusCmd.Flags().BoolVar(&statusVerify, "verify", false, "verify token against hr-gateway")
 	root.AddCommand(statusCmd)
 	var login auth.LoginRequest
 	loginCmd := &cobra.Command{
 		Use: "+login",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			data, err := auth.Login(login)
+			data, err := auth.Login(cmd.Context(), login)
 			if err != nil {
 				return err
 			}
@@ -50,12 +50,14 @@ func newAuthCommand() *cobra.Command {
 	loginCmd.Flags().StringVar(&login.DingUserID, "ding-userid", "", "DingTalk userid")
 	loginCmd.Flags().StringVar(&login.Role, "role", "", "operator role: SELF, HRBP, MANAGER, or HR_ADMIN")
 	loginCmd.Flags().BoolVar(&login.DingTalk, "dingtalk", false, "login through DingTalk OAuth broker")
-	loginCmd.Flags().StringVar(&login.AuthBaseURL, "auth-base-url", "", "hr-cli auth broker base URL")
+	loginCmd.Flags().StringVar(&login.Provider, "provider", "", "authentication provider: legacy_gateway or hydra")
+	loginCmd.Flags().StringVar(&login.AuthBaseURL, "auth-base-url", "", "hr-gateway base URL")
 	loginCmd.Flags().BoolVar(&login.NoBrowser, "no-browser", false, "print the login URL without opening a browser")
-	loginCmd.Flags().BoolVar(&login.NoWait, "no-wait", false, "start DingTalk login and return without polling")
+	loginCmd.Flags().BoolVar(&login.NoWait, "no-wait", false, "start login and return without polling")
 	loginCmd.Flags().StringVar(&login.LoginID, "login-id", "", "resume polling a previous DingTalk login id")
 	loginCmd.Flags().StringVar(&login.LoginSecret, "login-secret", "", "resume polling a previous DingTalk login secret")
-	loginCmd.Flags().IntVar(&login.TimeoutSeconds, "timeout", 180, "DingTalk login timeout in seconds")
+	loginCmd.Flags().StringVar(&login.ResumeID, "resume-id", "", "resume a pending Hydra device authorization")
+	loginCmd.Flags().IntVar(&login.TimeoutSeconds, "timeout", 0, "optional maximum login polling time in seconds")
 	root.AddCommand(loginCmd)
 	root.AddCommand(&cobra.Command{
 		Use: "+logout",

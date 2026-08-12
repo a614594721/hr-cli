@@ -46,6 +46,14 @@ func newProfileCommand() *cobra.Command {
 		},
 	}
 	add.Flags().StringVar(&profile.AuthBaseURL, "auth-base-url", "", "hr-gateway base URL")
+	add.Flags().StringVar(&profile.AuthProvider, "auth-provider", "", "authentication provider: legacy_gateway or hydra")
+	add.Flags().StringVar(&profile.HydraIssuer, "hydra-issuer", "", "Hydra issuer used for OAuth discovery")
+	add.Flags().StringVar(&profile.HydraDeviceAuthorizationURL, "hydra-device-endpoint", "", "explicit Hydra device authorization endpoint")
+	add.Flags().StringVar(&profile.HydraTokenURL, "hydra-token-endpoint", "", "explicit Hydra token endpoint")
+	add.Flags().StringVar(&profile.HydraRevocationURL, "hydra-revoke-endpoint", "", "explicit Hydra revocation endpoint")
+	add.Flags().StringVar(&profile.HydraClientID, "hydra-client-id", "", "Hydra public client ID (default hr-cli)")
+	add.Flags().StringVar(&profile.HydraAudience, "hydra-audience", "", "requested Hydra access-token audience")
+	add.Flags().StringVar(&profile.HydraScope, "hydra-scope", "", "requested space-separated Hydra scopes")
 
 	use := &cobra.Command{
 		Use:  "use <name>",

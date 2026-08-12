@@ -22,6 +22,9 @@ hr auth +login --ding-userid 1835191914705266
 hr auth +login --dingtalk --auth-base-url https://your-domain.example.com
 hr auth +login --dingtalk --no-wait
 hr auth +login --dingtalk --login-id <login_id> --login-secret <login_secret>
+hr auth +login --provider hydra
+hr auth +login --provider hydra --no-wait
+hr auth +login --resume-id <resume_id>
 hr auth +me
 hr auth status
 hr auth status --verify

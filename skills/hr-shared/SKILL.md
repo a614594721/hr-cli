@@ -49,6 +49,16 @@ hr auth +login --dingtalk
 
 **Agent 规则**:`hr auth +login --dingtalk` 会**阻塞等待用户完成浏览器授权**(默认 180s 超时)。如果你是 agent 在 background 跑命令,提前告诉用户"浏览器会自动打开,请扫码同意"。
 
+Hydra profile 显式启用后使用 public-client Device Flow:
+
+```bash
+hr auth +login --provider hydra --no-wait
+# 用户打开 verification_uri 并输入 user_code 后:
+hr auth +login --resume-id <resume_id>
+```
+
+Hydra 模式不使用 client secret。未传 `--timeout` 时轮询到 device code 到期;Agent 推荐使用 `--no-wait` 和 `resume_id`,不要长期占用前台命令。
+
 ```bash
 hr auth +me        # 验证当前会话
 hr auth status     # 查 token 有效期

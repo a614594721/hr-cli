@@ -16,6 +16,7 @@ func TestTokenStatus(t *testing.T) {
 		{
 			name: "valid",
 			token: &StoredToken{
+				RefreshToken:          "refresh",
 				AccessTokenExpiresAt:  now.Add(10 * time.Minute).Format(time.RFC3339),
 				RefreshTokenExpiresAt: now.Add(24 * time.Hour).Format(time.RFC3339),
 			},
@@ -24,6 +25,7 @@ func TestTokenStatus(t *testing.T) {
 		{
 			name: "needs refresh",
 			token: &StoredToken{
+				RefreshToken:          "refresh",
 				AccessTokenExpiresAt:  now.Add(2 * time.Minute).Format(time.RFC3339),
 				RefreshTokenExpiresAt: now.Add(24 * time.Hour).Format(time.RFC3339),
 			},

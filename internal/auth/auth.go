@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"context"
+
 	"hr-cli/internal/errs"
 	"hr-cli/internal/runtime"
 )
@@ -17,10 +19,9 @@ type Operator struct {
 	Source string `json:"source"`
 }
 
-// LoginRequest captures the flag inputs for `hr auth +login`. After the
-// gateway cutover the only supported login flow is DingTalk OAuth (DingTalk
-// flag implied), so the legacy direct-DB identifier flags (--eid/--badge/...)
-// are accepted for backward CLI compatibility but ignored.
+// LoginRequest captures the flag inputs for `hr auth +login`. Legacy direct-DB
+// identifier flags (--eid/--badge/...) remain accepted for CLI compatibility
+// but are ignored by both supported HTTP-based providers.
 type LoginRequest struct {
 	EID            int
 	Badge          string
@@ -35,15 +36,17 @@ type LoginRequest struct {
 	NoWait         bool
 	LoginID        string
 	LoginSecret    string
+	Provider       string
+	ResumeID       string
 	TimeoutSeconds int
 }
 
 func Me() (Operator, *errs.Error) {
 	session, hasSession := runtime.LoadSession()
-	if !hasSession || session.Source != "dingtalk_oauth" {
-		return Operator{}, errs.Authentication("not_logged_in", "no active DingTalk session; run hr auth +login --dingtalk")
+	if !hasSession {
+		return Operator{}, errs.Authentication("not_logged_in", "no active authentication session; run hr auth +login")
 	}
-	refreshed, err := refreshSessionIfNeeded(session, false)
+	refreshed, err := refreshSessionIfNeeded(context.Background(), session, false)
 	if err != nil {
 		return Operator{}, err
 	}
@@ -52,11 +55,11 @@ func Me() (Operator, *errs.Error) {
 		return Operator{}, err
 	}
 	if stored == nil {
-		return Operator{}, errs.Authentication("missing_token", "DingTalk token is missing; run hr auth +login --dingtalk")
+		return Operator{}, errs.Authentication("missing_token", "authentication token is missing; "+loginHint(session))
 	}
 	operator, _, err := remoteMe(refreshed, stored)
 	if err != nil {
-		refreshed, err = refreshSessionIfNeeded(refreshed, true)
+		refreshed, err = refreshSessionIfNeeded(context.Background(), refreshed, true)
 		if err != nil {
 			return Operator{}, err
 		}
@@ -65,7 +68,7 @@ func Me() (Operator, *errs.Error) {
 			return Operator{}, err
 		}
 		if stored == nil {
-			return Operator{}, errs.Authentication("missing_token", "DingTalk token is missing; run hr auth +login --dingtalk")
+			return Operator{}, errs.Authentication("missing_token", "authentication token is missing; "+loginHint(session))
 		}
 		operator, _, err = remoteMe(refreshed, stored)
 		if err != nil {
@@ -77,12 +80,17 @@ func Me() (Operator, *errs.Error) {
 	refreshed.Badge = operator.Badge
 	refreshed.Name = operator.Name
 	refreshed.Role = operator.Role
-	refreshed.Source = "dingtalk_oauth"
+	if operator.Source != "" {
+		refreshed.Source = operator.Source
+	}
 	if saveErr := runtime.SaveSession(refreshed); saveErr != nil {
 		return Operator{}, saveErr
 	}
 	if operator.Source == "" {
-		operator.Source = "dingtalk_oauth"
+		operator.Source = refreshed.Source
+		if operator.Source == "" {
+			operator.Source = sessionProvider(refreshed)
+		}
 	}
 	return operator, nil
 }
@@ -105,12 +113,13 @@ func Status(verify bool) (map[string]any, *errs.Error) {
 }
 
 func statusData(operator Operator, session runtime.Session, hasSession bool, verified bool) (map[string]any, *errs.Error) {
-	mode := operator.Source
-	if mode == "" {
+	provider := sessionProvider(session)
+	mode := provider
+	if provider == ProviderLegacyGateway {
 		mode = "dingtalk_oauth"
 	}
 	status := "active"
-	data := map[string]any{"status": status, "mode": mode, "operator": operator, "verified": verified}
+	data := map[string]any{"status": status, "mode": mode, "provider": provider, "operator": operator, "verified": verified}
 	if hasSession {
 		stored, err := loadStoredToken(session)
 		if err != nil {
@@ -133,22 +142,43 @@ func statusData(operator Operator, session runtime.Session, hasSession bool, ver
 		}
 		data["token_status"] = tokenState
 		data["auth_base_url"] = session.AuthBaseURL
+		data["provider"] = sessionProvider(session)
+		if session.Issuer != "" {
+			data["issuer"] = session.Issuer
+			data["client_id"] = session.ClientID
+			data["audience"] = session.Audience
+			data["scope"] = session.Scope
+		}
 	}
 	return data, nil
 }
 
-// Login is the public entry point for `hr auth +login`. The gateway-only CLI
-// supports a single login mechanism: DingTalk OAuth via the broker. We accept
-// the legacy --dingtalk flag for explicitness but treat it as the default.
-func Login(req LoginRequest) (map[string]any, *errs.Error) {
+// Login is the provider-neutral entry point for `hr auth +login`. Legacy
+// gateway login remains the default until Hydra is explicitly selected.
+func Login(ctx context.Context, req LoginRequest) (map[string]any, *errs.Error) {
+	provider, err := resolveLoginProvider(req)
+	if err != nil {
+		return nil, err
+	}
+	if provider == ProviderHydra {
+		return LoginHydra(ctx, req)
+	}
 	return LoginDingTalk(req)
 }
 
 func Logout() (map[string]any, *errs.Error) {
 	session, hasSession := runtime.LoadSession()
 	remoteRevoked := false
-	if hasSession && session.Source == "dingtalk_oauth" && session.AuthBaseURL != "" {
-		remoteRevoked = revokeRemoteSession(session)
+	provider := ProviderLegacyGateway
+	mode := "dingtalk_oauth"
+	if hasSession {
+		provider = sessionProvider(session)
+		if provider == ProviderHydra {
+			mode = ProviderHydra
+			remoteRevoked = revokeHydraSession(context.Background(), session)
+		} else if session.AuthBaseURL != "" {
+			remoteRevoked = revokeRemoteSession(session)
+		}
 		if err := removeStoredToken(session); err != nil {
 			return nil, err
 		}
@@ -161,21 +191,21 @@ func Logout() (map[string]any, *errs.Error) {
 	if removed {
 		status = "cleared"
 	}
-	return map[string]any{"status": status, "mode": "dingtalk_oauth", "remote_revoked": remoteRevoked}, nil
+	return map[string]any{"status": status, "mode": mode, "provider": provider, "remote_revoked": remoteRevoked}, nil
 }
 
-// AccessToken returns a usable DingTalk-broker access token, refreshing it
-// in-place if it is within the refresh-ahead window. Returns ("", nil) when
-// no DingTalk session is configured.
+// AccessToken returns a usable access token from the active provider,
+// refreshing it in-place if it is within the refresh-ahead window. It returns
+// ("", nil) when no authentication session is configured.
 //
 // force=true bypasses the freshness check and always rotates the token —
 // used by the gateway client after a 401/token_expired response.
 func AccessToken(force bool) (string, *errs.Error) {
 	session, ok := runtime.LoadSession()
-	if !ok || session.Source != "dingtalk_oauth" {
+	if !ok {
 		return "", nil
 	}
-	refreshed, err := refreshSessionIfNeeded(session, force)
+	refreshed, err := refreshSessionIfNeeded(context.Background(), session, force)
 	if err != nil {
 		return "", err
 	}
@@ -184,7 +214,7 @@ func AccessToken(force bool) (string, *errs.Error) {
 		return "", err
 	}
 	if stored == nil {
-		return "", errs.Authentication("missing_token", "DingTalk token is missing; run hr auth +login --dingtalk")
+		return "", errs.Authentication("missing_token", "authentication token is missing; "+loginHint(session))
 	}
 	return stored.AccessToken, nil
 }

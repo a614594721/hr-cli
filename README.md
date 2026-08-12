@@ -2,7 +2,7 @@
 
 > 面向 HR 运维、HRBP 和 AI Agent 的人力命令行工具,通过 hr-gateway 安全访问公司 HR 数据。
 
-`hr-cli` 是一个**纯 HTTP 瘦客户端**,本身不持有任何数据库凭证、不实现权限决策、不写审计。所有数据库连接、perm/scope 决策、审计写入都发生在 hr-gateway 服务端;客户端只持有钉钉 OAuth 颁发的短期 access_token,通过 HTTPS 调用 gateway。
+`hr-cli` 是一个**纯 HTTP 瘦客户端**,本身不持有任何数据库凭证、不实现权限决策、不写审计。所有数据库连接、perm/scope 决策、审计写入都发生在 hr-gateway 服务端;客户端只持有认证服务颁发的短期 access_token,通过 HTTPS 调用 gateway。默认仍使用现有网关登录,也可显式启用 Ory Hydra Device Flow。
 
 [安装](#安装) · [项目背景](#项目背景与愿景) · [快速开始](#快速开始-用户) · [AI Agent 快速开始](#快速开始-ai-agent) · [命令体系](#命令体系) · [输出协议](#输出协议) · [安全](#安全与边界) · [架构](#架构)
 
@@ -81,6 +81,23 @@ hr employee +find --badge P000487
 
 后续命令自动用 access_token,过期前 5 分钟自动刷新。
 
+### Ory Hydra 登录(显式启用)
+
+Hydra 模式使用 `hr-cli` public client,不需要也不允许 client secret。推荐通过 issuer 的 OIDC discovery 获取 `/oauth2/device/auth`、token 和 revoke 端点:
+
+```bash
+hr profile add hydra-qa \
+  --auth-base-url https://gateway-qa.example.com \
+  --auth-provider hydra \
+  --hydra-issuer https://auth-qa.example.com \
+  --hydra-audience hr-gateway \
+  --hydra-scope "openid offline_access hr.employee.read"
+hr profile use hydra-qa
+hr auth +login --provider hydra
+```
+
+Agent 可先执行 `hr auth +login --provider hydra --no-wait`,向用户展示返回的验证地址和 user code,授权后执行 `hr auth +login --resume-id <resume_id>`。未显式指定 `--timeout` 时会轮询到 device code 自身过期。非本机 Hydra issuer 和 OAuth 端点必须使用 HTTPS。详见 [`docs/hydra-device-auth.md`](docs/hydra-device-auth.md)。
+
 ## 快速开始 (AI Agent)
 
 > 给协助用户的 AI Agent。**hr-cli 二进制内嵌了所有 skills**,装完包后用 `hr-cli skills` 直接读取,不需要克隆仓库或浏览 gitee。**先读 hr-shared** —— 它定义了认证、错误 envelope、scope 模型、写操作两阶段安全模式;每个 capability skill 都假设你已经读过 hr-shared。
@@ -143,7 +160,7 @@ hr auth +me
 
 ```text
 hr <domain> +<shortcut>     # 业务快捷命令(human + AI 友好)
-hr auth        # 登录、身份、登出、权限解释
+hr auth        # 登录、身份、状态、登出
 hr employee    # 员工查询
 hr attendance  # 考勤
 hr approval    # 审批查询(写操作 1.0 仅 dry-run)
@@ -282,6 +299,7 @@ hr approval +instances --employee 12345 --status pending
 
 相关文档:
 - [钉钉 OAuth 登录](docs/dingtalk-oauth-auth.md)
+- [Ory Hydra Device 登录](docs/hydra-device-auth.md)
 - [命令契约](docs/command-contract.md)
 - [错误契约](docs/error-contract.md)
 - [npm 发布计划](docs/npm-publish-plan.md)

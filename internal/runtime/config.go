@@ -25,7 +25,15 @@ type Config struct {
 // to track here, and the operator identity is derived from the JWT issued by
 // hr-gateway, not from local fields.
 type Profile struct {
-	AuthBaseURL string `json:"auth_base_url,omitempty"`
+	AuthBaseURL                 string `json:"auth_base_url,omitempty"`
+	AuthProvider                string `json:"auth_provider,omitempty"`
+	HydraIssuer                 string `json:"hydra_issuer,omitempty"`
+	HydraDeviceAuthorizationURL string `json:"hydra_device_authorization_url,omitempty"`
+	HydraTokenURL               string `json:"hydra_token_url,omitempty"`
+	HydraRevocationURL          string `json:"hydra_revocation_url,omitempty"`
+	HydraClientID               string `json:"hydra_client_id,omitempty"`
+	HydraAudience               string `json:"hydra_audience,omitempty"`
+	HydraScope                  string `json:"hydra_scope,omitempty"`
 }
 
 func Init() (map[string]any, *errs.Error) {
@@ -116,9 +124,14 @@ func ListProfiles() (map[string]any, *errs.Error) {
 	items := []map[string]any{}
 	for name, profile := range cfg.Profiles {
 		items = append(items, map[string]any{
-			"name":          name,
-			"active":        name == cfg.CurrentProfile,
-			"auth_base_url": profile.AuthBaseURL,
+			"name":            name,
+			"active":          name == cfg.CurrentProfile,
+			"auth_provider":   profile.AuthProvider,
+			"auth_base_url":   profile.AuthBaseURL,
+			"hydra_issuer":    profile.HydraIssuer,
+			"hydra_client_id": profile.HydraClientID,
+			"hydra_audience":  profile.HydraAudience,
+			"hydra_scope":     profile.HydraScope,
 		})
 	}
 	return map[string]any{"items": items, "current_profile": cfg.CurrentProfile}, nil
@@ -135,6 +148,9 @@ func ActiveProfile() (Profile, bool) {
 	}
 	if profile.AuthBaseURL == "" {
 		profile.AuthBaseURL = DefaultAuthBaseURL
+	}
+	if profile.AuthProvider == "" {
+		profile.AuthProvider = "legacy_gateway"
 	}
 	return profile, true
 }
